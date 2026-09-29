@@ -1,0 +1,19 @@
+{
+ "windows": [
+  {
+   "range": "20210101-20251231",
+   "status": "spent",
+   "note": "the seven walk-forward folds (Plan \u00a713-\u00a715)"
+  },
+  {
+   "range": "20260101-20260928",
+   "status": "spent",
+   "note": "H3's holdout, spent 2026-09-29 (Plan \u00a717)"
+  },
+  {
+   "range": "20190101-20201231",
+   "status": "clean",
+   "note": "the last untouched window; ~11-13 of 17 pairs exist; spans the 2019 bear + COVID crash (Plan \u00a718.2)"
+  }
+ ]
+}
