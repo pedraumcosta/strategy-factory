@@ -1,0 +1,29 @@
+# Secrets — nothing private is ever tracked; env vars only
+*private*
+.env
+.env.*
+
+# Run artifacts: manifests are tracked, bulk outputs are not
+runs/*/artifacts/
+runs/*/data/
+*.sqlite
+*.feather
+*.parquet
+*.fthypt
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Notebooks: executed outputs live in runs/, templates stay clean
+notebooks/**/*.executed.ipynb
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
