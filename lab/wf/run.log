@@ -1,0 +1,43 @@
+[18:54:53] ===== fold 1 : IS 20210101-20220702  OOS 20220702-20221231 =====
+[18:54:53] fold 1: hyperopt on IS (100 epochs, buy/sell/roi/stoploss, Sharpe loss)
+[18:56:21] fold 1: params saved
+[18:56:21] fold 1: backtest IS (with optimised params)
+[18:56:29] fold 1: backtest OOS (same params, unseen window)
+[18:56:36] fold 1: control Strategy005v0 on OOS (no parameters, cannot be overfitted)
+[18:56:41] ===== fold 2 : IS 20210702-20221231  OOS 20221231-20230701 =====
+[18:56:41] fold 2: hyperopt on IS (100 epochs, buy/sell/roi/stoploss, Sharpe loss)
+[18:58:06] fold 2: params saved
+[18:58:06] fold 2: backtest IS (with optimised params)
+[18:58:14] fold 2: backtest OOS (same params, unseen window)
+[18:58:20] fold 2: control Strategy005v0 on OOS (no parameters, cannot be overfitted)
+[18:58:26] ===== fold 3 : IS 20220101-20230702  OOS 20230702-20231231 =====
+[18:58:26] fold 3: hyperopt on IS (100 epochs, buy/sell/roi/stoploss, Sharpe loss)
+[18:59:49] fold 3: params saved
+[18:59:49] fold 3: backtest IS (with optimised params)
+[18:59:56] fold 3: backtest OOS (same params, unseen window)
+[19:00:01] fold 3: control Strategy005v0 on OOS (no parameters, cannot be overfitted)
+[19:00:07] ===== fold 4 : IS 20220702-20231231  OOS 20231231-20240630 =====
+[19:00:07] fold 4: hyperopt on IS (100 epochs, buy/sell/roi/stoploss, Sharpe loss)
+[19:01:46] fold 4: params saved
+[19:01:46] fold 4: backtest IS (with optimised params)
+[19:01:55] fold 4: backtest OOS (same params, unseen window)
+[19:02:02] fold 4: control Strategy005v0 on OOS (no parameters, cannot be overfitted)
+[19:02:08] ===== fold 5 : IS 20230101-20240701  OOS 20240701-20241230 =====
+[19:02:08] fold 5: hyperopt on IS (100 epochs, buy/sell/roi/stoploss, Sharpe loss)
+[19:03:35] fold 5: params saved
+[19:03:35] fold 5: backtest IS (with optimised params)
+[19:03:44] fold 5: backtest OOS (same params, unseen window)
+[19:03:51] fold 5: control Strategy005v0 on OOS (no parameters, cannot be overfitted)
+[19:03:56] ===== fold 6 : IS 20230702-20241230  OOS 20241230-20250630 =====
+[19:03:56] fold 6: hyperopt on IS (100 epochs, buy/sell/roi/stoploss, Sharpe loss)
+[19:05:27] fold 6: params saved
+[19:05:27] fold 6: backtest IS (with optimised params)
+[19:05:36] fold 6: backtest OOS (same params, unseen window)
+[19:05:43] fold 6: control Strategy005v0 on OOS (no parameters, cannot be overfitted)
+[19:05:48] ===== fold 7 : IS 20240101-20250701  OOS 20250701-20251230 =====
+[19:05:48] fold 7: hyperopt on IS (100 epochs, buy/sell/roi/stoploss, Sharpe loss)
+[19:07:19] fold 7: params saved
+[19:07:20] fold 7: backtest IS (with optimised params)
+[19:07:27] fold 7: backtest OOS (same params, unseen window)
+[19:07:33] fold 7: control Strategy005v0 on OOS (no parameters, cannot be overfitted)
+[19:07:39] ===== walk-forward complete =====

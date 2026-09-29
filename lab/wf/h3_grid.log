@@ -1,0 +1,21 @@
+  lookback=20  top_k=2   mean OOS    4.461%  folds+ 5/7  trades 649
+  lookback=20  top_k=3   mean OOS    7.622%  folds+ 6/7  trades 871
+  lookback=20  top_k=4   mean OOS    8.572%  folds+ 5/7  trades 998
+  lookback=20  top_k=5   mean OOS   10.788%  folds+ 5/7  trades 1148
+  lookback=30  top_k=2   mean OOS    3.329%  folds+ 4/7  trades 578
+  lookback=30  top_k=3   mean OOS    5.928%  folds+ 5/7  trades 736
+  lookback=30  top_k=4   mean OOS    7.787%  folds+ 4/7  trades 860
+  lookback=30  top_k=5   mean OOS   10.329%  folds+ 4/7  trades 1004
+  lookback=40  top_k=2   mean OOS    5.435%  folds+ 5/7  trades 458
+  lookback=40  top_k=3   mean OOS    7.397%  folds+ 5/7  trades 676
+  lookback=40  top_k=4   mean OOS    9.403%  folds+ 5/7  trades 777
+  lookback=40  top_k=5   mean OOS   11.709%  folds+ 4/7  trades 885
+  lookback=50  top_k=2   mean OOS    5.167%  folds+ 4/7  trades 475
+  lookback=50  top_k=3   mean OOS    7.894%  folds+ 4/7  trades 643
+  lookback=50  top_k=4   mean OOS   10.173%  folds+ 4/7  trades 748
+  lookback=50  top_k=5   mean OOS   13.624%  folds+ 4/7  trades 841
+  lookback=60  top_k=2   mean OOS    6.399%  folds+ 5/7  trades 420
+  lookback=60  top_k=3   mean OOS    8.684%  folds+ 5/7  trades 524
+  lookback=60  top_k=4   mean OOS   10.743%  folds+ 5/7  trades 677
+  lookback=60  top_k=5   mean OOS   12.316%  folds+ 4/7  trades 769
+grid complete

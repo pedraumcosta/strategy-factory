@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# freqtrade 2026.8 via docker. user_data lives here (Dropbox-synced);
+# OHLCV cache lives in ~/freqtrade-data (outside Dropbox - avoids sync churn on big downloads).
+# Never invoke `trade` from here without reading Autotrader Plan section 6 Phase 0 first.
+LAB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TTY=(); [ -t 0 ] && [ -t 1 ] && TTY=(-it)
+mkdir -p "$LAB/user_data" "$HOME/freqtrade-data"
+exec docker run --rm "${TTY[@]}" \
+  --user "$(id -u):$(id -g)" \
+  -v "$LAB/user_data:/freqtrade/user_data" \
+  -v "$HOME/freqtrade-data:/freqtrade/user_data/data" \
+  -e TZ="$(cat /etc/timezone 2>/dev/null || echo UTC)" \
+  freqtrade-lab:2026.8 "$@"

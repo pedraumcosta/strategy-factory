@@ -1,0 +1,7 @@
+# freqtrade-lab:2026.8-research = the lab image + the factor/performance research stack.
+# Built 2026-09-29 for Autotrader Plan section 20.7 step 1 (the Alphalens pre-fold factor
+# screen) and step 2 (the pyfolio tear sheet). The Quantopian originals are unmaintained;
+# the "-reloaded" forks are the live ones, which is why the names look odd.
+FROM freqtrade-lab:2026.8
+USER ftuser
+RUN pip install --user --no-cache-dir alphalens-reloaded pyfolio-reloaded

@@ -1,0 +1,35 @@
+{
+  "strategy_name": "BBRSIStrategy",
+  "params": {
+    "trailing": {
+      "trailing_stop": false,
+      "trailing_stop_positive": null,
+      "trailing_stop_positive_offset": 0.0,
+      "trailing_only_offset_is_reached": false
+    },
+    "max_open_trades": {
+      "max_open_trades": 10
+    },
+    "buy": {
+      "buy_rsi": 47,
+      "buy_rsi_enabled": true,
+      "buy_trigger": "bb_lower1"
+    },
+    "sell": {
+      "sell_rsi": 80,
+      "sell_rsi_enabled": true,
+      "sell_trigger": "bb_middle1"
+    },
+    "roi": {
+      "0": 0.514,
+      "290": 0.135,
+      "900": 0.081,
+      "2176": 0
+    },
+    "stoploss": {
+      "stoploss": -0.156
+    }
+  },
+  "ft_stratparam_v": 1,
+  "export_time": "2026-09-28 22:01:43.964314+00:00"
+}

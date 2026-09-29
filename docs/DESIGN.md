@@ -20,7 +20,7 @@ point there. This file is what you build from.
    Sep 2026, each for a measured, diagnosed reason. Their recorded numbers are fixtures:
    the factory must re-kill each at the right stage for the right reason.
 4. **The engine is freqtrade, across a process boundary.** The factory shells out to the
-   sibling `freqtrade-lab` docker images (`freqtrade-lab:2026.8` for backtests,
+   in-repo lab's (`lab/`) docker images (`freqtrade-lab:2026.8` for backtests,
    `:2026.8-research` for screens/tear sheets — never mixed: the research image downgrades
    pandas). Strategies are materialized into the run directory and passed via
    `--strategy-path`; the lab's own tree is never written to.
@@ -77,6 +77,7 @@ factory/
   observer/       # S7 poller + parity + alerts
 notebooks/        # papermill templates per human gate
 runs/<id>/        # manifest.json + approvals/ tracked; artifacts/ gitignored
+lab/              # the engine room: freqtrade docker workspace + wf/ research harness
 fixtures/         # the graveyard: recorded numbers for the six dead hypotheses
 deploy/           # compose + VM runbook
 ```

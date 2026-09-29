@@ -1,0 +1,66 @@
+[20:04:40] ########## XSMomentum (1d) ##########
+[20:04:40] XSMomentum fold 1: control (defaults, no hyperopt) on OOS
+[20:04:46] XSMomentum fold 1: hyperopt on IS
+[20:04:51] XSMomentum fold 1: no params produced
+[20:04:51] XSMomentum fold 1: IS with optimised params
+[20:04:57] XSMomentum fold 1: OOS with optimised params
+[20:05:03] XSMomentum fold 2: control (defaults, no hyperopt) on OOS
+[20:05:08] XSMomentum fold 2: hyperopt on IS
+[20:05:13] XSMomentum fold 2: no params produced
+[20:05:13] XSMomentum fold 2: IS with optimised params
+[20:05:19] XSMomentum fold 2: OOS with optimised params
+[20:05:25] XSMomentum fold 3: control (defaults, no hyperopt) on OOS
+[20:05:31] XSMomentum fold 3: hyperopt on IS
+[20:05:35] XSMomentum fold 3: no params produced
+[20:05:35] XSMomentum fold 3: IS with optimised params
+[20:05:43] XSMomentum fold 3: OOS with optimised params
+[20:05:51] XSMomentum fold 4: control (defaults, no hyperopt) on OOS
+[20:05:59] XSMomentum fold 4: hyperopt on IS
+[20:06:04] XSMomentum fold 4: no params produced
+[20:06:04] XSMomentum fold 4: IS with optimised params
+[20:06:11] XSMomentum fold 4: OOS with optimised params
+[20:06:20] XSMomentum fold 5: control (defaults, no hyperopt) on OOS
+[20:06:31] XSMomentum fold 5: hyperopt on IS
+[20:06:37] XSMomentum fold 5: no params produced
+[20:06:37] XSMomentum fold 5: IS with optimised params
+[20:06:46] XSMomentum fold 5: OOS with optimised params
+[20:06:54] XSMomentum fold 6: control (defaults, no hyperopt) on OOS
+[20:07:00] XSMomentum fold 6: hyperopt on IS
+[20:07:05] XSMomentum fold 6: no params produced
+[20:07:05] XSMomentum fold 6: IS with optimised params
+[20:07:11] XSMomentum fold 6: OOS with optimised params
+[20:07:17] XSMomentum fold 7: control (defaults, no hyperopt) on OOS
+[20:07:22] XSMomentum fold 7: hyperopt on IS
+[20:07:26] XSMomentum fold 7: no params produced
+[20:07:26] XSMomentum fold 7: IS with optimised params
+[20:07:32] XSMomentum fold 7: OOS with optimised params
+[20:07:38] ########## TrendVolTarget (4h) ##########
+[20:07:38] TrendVolTarget fold 1: control (defaults, no hyperopt) on OOS
+[20:07:43] TrendVolTarget fold 1: hyperopt on IS
+[20:08:42] TrendVolTarget fold 1: IS with optimised params
+[20:08:49] TrendVolTarget fold 1: OOS with optimised params
+[20:08:54] TrendVolTarget fold 2: control (defaults, no hyperopt) on OOS
+[20:09:00] TrendVolTarget fold 2: hyperopt on IS
+[20:09:54] TrendVolTarget fold 2: IS with optimised params
+[20:10:01] TrendVolTarget fold 2: OOS with optimised params
+[20:10:06] TrendVolTarget fold 3: control (defaults, no hyperopt) on OOS
+[20:10:12] TrendVolTarget fold 3: hyperopt on IS
+[20:11:04] TrendVolTarget fold 3: IS with optimised params
+[20:11:10] TrendVolTarget fold 3: OOS with optimised params
+[20:11:16] TrendVolTarget fold 4: control (defaults, no hyperopt) on OOS
+[20:11:21] TrendVolTarget fold 4: hyperopt on IS
+[20:12:21] TrendVolTarget fold 4: IS with optimised params
+[20:12:28] TrendVolTarget fold 4: OOS with optimised params
+[20:12:33] TrendVolTarget fold 5: control (defaults, no hyperopt) on OOS
+[20:12:38] TrendVolTarget fold 5: hyperopt on IS
+[20:13:37] TrendVolTarget fold 5: IS with optimised params
+[20:13:44] TrendVolTarget fold 5: OOS with optimised params
+[20:13:49] TrendVolTarget fold 6: control (defaults, no hyperopt) on OOS
+[20:13:54] TrendVolTarget fold 6: hyperopt on IS
+[20:14:51] TrendVolTarget fold 6: IS with optimised params
+[20:14:59] TrendVolTarget fold 6: OOS with optimised params
+[20:15:05] TrendVolTarget fold 7: control (defaults, no hyperopt) on OOS
+[20:15:10] TrendVolTarget fold 7: hyperopt on IS
+[20:16:06] TrendVolTarget fold 7: IS with optimised params
+[20:16:13] TrendVolTarget fold 7: OOS with optimised params
+[20:16:18] ########## pre-registered protocol complete ##########

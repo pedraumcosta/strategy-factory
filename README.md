@@ -34,8 +34,9 @@ suite: **the factory must re-kill every one of them, at the right stage, for the
 
 ## Provenance
 
-- Engine room: a freqtrade 2026.8 docker workspace (`freqtrade-lab`, sibling folder, not in
-  this repo) with a 7-fold walk-forward harness, screens and a tear sheet.
+- Engine room: [`lab/`](lab/) — a freqtrade 2026.8 docker workspace (formerly the standalone
+  `freqtrade-lab`, absorbed 2026-09-29) with a 7-fold walk-forward harness, screens and a tear
+  sheet. Its own README documents the harness, holdout status and ten hard-won gotchas.
 - Decision record: `Autotrader Plan.md` and `Strategy Factory Plan.md` in the private
   TechTrading knowledge folder (not in this repo).
 - Design: established practice for staged multi-agent build pipelines (role-scoped
