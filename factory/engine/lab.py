@@ -41,6 +41,9 @@ class BacktestResult:
     profit_total: float
     trades: list[Trade] = field(repr=False)
     export_zip: Path | None = None
+    # mean per-trade return ON STAKE (freqtrade profit_mean) — the basis the
+    # 3x cost rule uses; profit_total is on total capital and understates it
+    profit_mean: float = 0.0
 
     def trades_digest(self) -> str:
         """Order-independent digest of (pair, open, close) triples."""
@@ -173,4 +176,5 @@ class LabEngine:
             profit_total=s["profit_total"],
             trades=trades,
             export_zip=zpath,
+            profit_mean=s.get("profit_mean") or 0.0,
         )

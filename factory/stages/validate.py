@@ -46,9 +46,10 @@ def daily_returns_from_export(export_zip: Path, strategy: str) -> list[float]:
     with zipfile.ZipFile(export_zip) as z:
         name = export_zip.name.replace(".zip", f"_{strategy}_wallet.feather")
         df = pd.read_feather(io.BytesIO(z.read(name)))
-    col = [c for c in df.columns if c != "date"][0]
-    eq = df[col].astype(float)
-    return eq.pct_change().dropna().tolist()
+    # long format: one row per (date, currency); equity = total_quote summed
+    eq = df.groupby("date")["total_quote"].sum().sort_index()
+    rets = eq.pct_change().dropna()
+    return rets[rets.abs() < float("inf")].tolist()
 
 
 def run_validation(engine, spec: ValidateSpec, run_dir: Path,
@@ -71,6 +72,7 @@ def run_validation(engine, spec: ValidateSpec, run_dir: Path,
             "strategy": spec.strategy, "timerange": timerange,
             "fee": fee, "why": why,
             "trades": r.trade_count, "profit_total": r.profit_total,
+            "profit_mean": r.profit_mean,
         })
         return r
 
@@ -91,10 +93,10 @@ def run_validation(engine, spec: ValidateSpec, run_dir: Path,
     sweep = []
     for fee in spec.cost_fees:
         r = bt(spec.full_timerange, fee, "cost sweep")
-        per_trade = r.profit_total / r.trade_count if r.trade_count else 0.0
         sweep.append({"fee": fee, "trades": r.trade_count,
                       "profit_total": r.profit_total,
-                      "mean_per_trade": per_trade})
+                      # per-trade return ON STAKE — the 3x rule's basis
+                      "mean_per_trade": r.profit_mean})
     dossier["cost_sweep"] = sweep
     zero = next(s for s in sweep if s["fee"] == 0.0)
     gates = [core.zero_fee_sanity(zero["profit_total"])]
@@ -109,16 +111,25 @@ def run_validation(engine, spec: ValidateSpec, run_dir: Path,
         rets = daily_returns_from_export(full.export_zip, spec.strategy)
         sr_ann = dsr_mod.sharpe(rets, spec.periods_per_year)
         skew, kurt = dsr_mod.moments(rets)
-        historic = _historic_sharpes(trial_ledger)
-        n_trials = trials.count(trial_ledger)
-        sr_var = (statistics.variance(historic) / spec.periods_per_year
-                  if len(historic) >= 2 else 0.01 / spec.periods_per_year)
+        # Deflation family: trials on a comparable basis only — same
+        # timeframe, window >= 300d, finite recorded Sharpe. Mixing 1h
+        # hyperopt spam (sentinel values to -100) into the variance would
+        # make SR0 meaningless. Both counts are reported.
+        family = _historic_sharpes(trial_ledger, timeframe=spec.timeframe,
+                                   min_days=300)
+        n_ledger = trials.count(trial_ledger)
+        sr_var = (statistics.variance(family) / spec.periods_per_year
+                  if len(family) >= 2 else 0.01 / spec.periods_per_year)
         d = dsr_mod.dsr(sr=sr_ann / math.sqrt(spec.periods_per_year),
-                        n_obs=len(rets), n_trials=n_trials, sr_var=sr_var,
-                        skew=skew, kurt=kurt)
+                        n_obs=len(rets), n_trials=max(len(family), 2),
+                        sr_var=sr_var, skew=skew, kurt=kurt)
         d["sr_annualized"] = sr_ann
-        d["note"] = ("n_trials excludes hyperopt epochs, so this is an "
-                     "under-deflation; treat DSR as an upper bound")
+        d["n_ledger_total"] = n_ledger
+        d["note"] = (f"deflated within the comparable-basis family "
+                     f"({len(family)} trials, {spec.timeframe}, >=300d); the "
+                     f"full ledger holds {n_ledger} trials and hyperopt "
+                     f"epochs are uncounted, so the true search was wider — "
+                     f"treat DSR as an upper bound")
         dossier["deflated_sharpe"] = d
     except Exception as e:
         dossier["deflated_sharpe"] = {"error": f"unavailable: {e}"}
@@ -142,15 +153,25 @@ def run_validation(engine, spec: ValidateSpec, run_dir: Path,
                        {"dossier": "artifacts/dossier.json"})
 
 
-def _historic_sharpes(ledger: Path) -> list[float]:
+def _historic_sharpes(ledger: Path, timeframe: str | None = None,
+                      min_days: int = 0) -> list[float]:
     out = []
     if not ledger.exists():
         return out
     with open(ledger) as f:
         for line in f:
             r = json.loads(line)
-            if isinstance(r.get("sharpe"), (int, float)):
-                out.append(float(r["sharpe"]))
+            v = r.get("sharpe")
+            if not isinstance(v, (int, float)) or abs(v) > 50:
+                continue  # missing or sentinel
+            if timeframe is not None and r.get("timeframe") != timeframe:
+                continue
+            if min_days and not (
+                r.get("start_ts") and r.get("end_ts")
+                and (r["end_ts"] - r["start_ts"]) >= min_days * 86400
+            ):
+                continue
+            out.append(float(v))
     return out
 
 
@@ -179,7 +200,7 @@ def _render_md(d: dict) -> str:
         lines += [
             f"- annualized SR **{ds['sr_annualized']:.2f}** over {ds['n_obs']} daily obs "
             f"(skew {ds['skew']:+.2f}, kurt {ds['kurt']:.1f})",
-            f"- trials on the ledger: **{ds['n_trials']}** → expected max per-period SR {ds['sr0']:.4f}",
+            f"- deflation family {ds['n_trials']} trials (ledger total {ds.get('n_ledger_total', '?')}) → expected max per-period SR {ds['sr0']:.4f}",
             f"- **DSR = {ds['dsr']:.3f}** — {ds['note']}",
         ]
     else:

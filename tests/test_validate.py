@@ -25,7 +25,8 @@ class FakeEngine:
         trades = [Trade("BTC/USDT", "2022-01-01 00:00:00+00:00",
                         "2022-01-03 00:00:00+00:00", total)]
         return BacktestResult(strategy, 50, total * 1000, total,
-                              trades, export_zip=Path("/nonexistent.zip"))
+                              trades, export_zip=Path("/nonexistent.zip"),
+                              profit_mean=total / 50)
 
 
 FOLDS = [Fold(1, date(2021, 1, 1), date(2022, 6, 2), date(2022, 7, 2), date(2022, 12, 31)),

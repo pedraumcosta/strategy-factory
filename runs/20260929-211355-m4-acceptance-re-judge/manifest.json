@@ -1,0 +1,36 @@
+{
+ "run_id": "20260929-211355-m4-acceptance-re-judge",
+ "prompt": "M4 acceptance: re-judge H3 under the purged splitter",
+ "created_at": "2026-09-29T21:13:55-0300",
+ "stages": {
+  "S0": {
+   "status": "passed",
+   "report": "method-validation rerun of a recorded result; not a new hypothesis"
+  },
+  "S1": {
+   "status": "passed",
+   "report": "method-validation rerun of a recorded result; not a new hypothesis"
+  },
+  "S2": {
+   "status": "passed",
+   "report": "method-validation rerun of a recorded result; not a new hypothesis"
+  },
+  "S3": {
+   "status": "passed",
+   "report": "method-validation rerun of a recorded result; not a new hypothesis"
+  },
+  "S4": {
+   "status": "passed",
+   "report": "method-validation rerun of a recorded result; not a new hypothesis"
+  },
+  "S5": {
+   "status": "pending"
+  },
+  "S6": {
+   "status": "pending"
+  },
+  "S7": {
+   "status": "pending"
+  }
+ }
+}
