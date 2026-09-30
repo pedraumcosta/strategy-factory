@@ -3,7 +3,12 @@ name = "strategy-factory"
 version = "0.1.0"
 description = "Agent pipeline that researches, implements, validates, deploys (dry-run) and observes freqtrade strategies, with human gates between stages"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "ipykernel>=7.4.0",
+    "pandas>=3.0.6",
+    "papermill>=2.7.0",
+    "pyarrow>=25.0.1",
+]
 
 [dependency-groups]
 dev = ["pytest>=8"]
