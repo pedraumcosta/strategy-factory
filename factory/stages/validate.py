@@ -15,6 +15,8 @@ import json
 import math
 import statistics
 import zipfile
+from collections import defaultdict
+from datetime import datetime
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -106,7 +108,8 @@ def run_validation(engine, spec: ValidateSpec, run_dir: Path,
     # 3 — deflated Sharpe from the full-range run at the working fee
     full = bt(spec.full_timerange, spec.fee, "full range")
     dossier["full_range"] = {"trades": full.trade_count,
-                             "profit_total": full.profit_total}
+                             "profit_total": full.profit_total,
+                             **trade_shape(full.trades)}
     try:
         rets = daily_returns_from_export(full.export_zip, spec.strategy)
         sr_ann = dsr_mod.sharpe(rets, spec.periods_per_year)
@@ -153,6 +156,31 @@ def run_validation(engine, spec: ValidateSpec, run_dir: Path,
                        {"dossier": "artifacts/dossier.json"})
 
 
+def trade_shape(trades) -> dict:
+    """Protocol-checkable facts from the trade list: the maximum realized
+    holding period (a pre-registration that sized its purge must be able to
+    verify it) and monthly P&L concentration (G-conc — one month carrying
+    the result is the §17 failure; not screenable, so it must at least be
+    REPORTED here, even though the judgment stays human)."""
+    if not trades:
+        return {"max_hold_days": 0, "best_month_share": None}
+    fmt = "%Y-%m-%d %H:%M:%S%z"
+    max_hold = 0.0
+    monthly: dict[str, float] = defaultdict(float)
+    total = 0.0
+    for t in trades:
+        o = datetime.strptime(t.open_date, fmt)
+        c = datetime.strptime(t.close_date, fmt)
+        max_hold = max(max_hold, (c - o).total_seconds() / 86400)
+        monthly[c.strftime("%Y-%m")] += t.profit_abs
+        total += t.profit_abs
+    best_month, best_pnl = max(monthly.items(), key=lambda kv: kv[1])
+    share = best_pnl / total if total > 0 else None
+    return {"max_hold_days": round(max_hold, 1),
+            "best_month": best_month,
+            "best_month_share": None if share is None else round(share, 3)}
+
+
 def _historic_sharpes(ledger: Path, timeframe: str | None = None,
                       min_days: int = 0) -> list[float]:
     out = []
@@ -194,6 +222,14 @@ def _render_md(d: dict) -> str:
               "| fee/side | trades | total return | mean/trade |", "|---|---|---|---|"]
     for s in d["cost_sweep"]:
         lines.append(f"| {s['fee']:.4f} | {s['trades']} | {s['profit_total']:+.2%} | {s['mean_per_trade']:+.4%} |")
+    fr = d["full_range"]
+    lines += ["", "## Trade shape (full range)", "",
+              f"- max realized hold: **{fr.get('max_hold_days', '?')} days** "
+              f"(check against the pre-registered purge)",
+              f"- best month {fr.get('best_month', '?')} holds "
+              f"**{fr['best_month_share']:.0%}** of total profit (G-conc)"
+              if fr.get("best_month_share") is not None else
+              "- monthly concentration: not computable (no/negative total)"]
     ds = d.get("deflated_sharpe", {})
     lines += ["", "## Deflated Sharpe", ""]
     if "dsr" in ds:

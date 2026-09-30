@@ -126,6 +126,22 @@ def replay_from(run_dir: Path, stage: str) -> list[str]:
     return reset
 
 
+def reject(run_dir: Path, stage: str, reason: str) -> None:
+    """The other half of a human gate: kill a completed needs_human stage
+    with the reviewer's reasoning on the record. Terminal, like any kill."""
+    if not reason.strip():
+        raise GateRefusal("a rejection must state its reasons")
+    m = mf.load(run_dir)
+    st = m.stages[stage]
+    if not (st["status"] == "needs_human" and st.get("completed")):
+        raise GateRefusal(f"stage {stage} is not awaiting a human verdict "
+                          f"(status {st['status']!r})")
+    st["status"] = "killed"
+    st["report"] = f"rejected by human: {reason}"
+    st["rejected_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    mf.save(run_dir, m)
+
+
 def acknowledge(run_dir: Path, stage: str, ) -> None:
     """Clear a completed needs_human stage after its gate was signed.
     Verifies the signature (and that the reviewed artifacts are unchanged)

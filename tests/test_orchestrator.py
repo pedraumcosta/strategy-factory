@@ -147,3 +147,24 @@ def test_replay_resets_killed_stage_and_after(tmp_path):
     assert m.stages["S0"]["status"] == "passed"      # untouched
     assert m.stages["S1"]["status"] == "pending"     # runnable again
     assert m.next_stage() == "S1"
+
+
+def test_reject_kills_an_awaiting_stage_with_reasons(tmp_path):
+    from factory.orchestrator.runner import reject
+
+    def waits(run_dir, m):
+        return StageResult("needs_human", "review me")
+
+    run_dir, r = make_run(tmp_path, {"S0": passed, "S1": passed, "S2": passed,
+                                     "S3": waits})
+    with pytest.raises(GateRefusal):
+        r.run_to("S3")
+    with pytest.raises(GateRefusal, match="must state its reasons"):
+        reject(run_dir, "S3", "  ")
+    reject(run_dir, "S3", "fails its own protocol tripwire")
+    m = mf.load(run_dir)
+    assert m.stages["S3"]["status"] == "killed"
+    assert "tripwire" in m.stages["S3"]["report"]
+    assert m.next_stage() is None  # terminal
+    with pytest.raises(GateRefusal, match="not awaiting"):
+        reject(run_dir, "S3", "twice")

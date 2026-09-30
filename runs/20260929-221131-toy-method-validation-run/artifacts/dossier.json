@@ -1,0 +1,175 @@
+{
+ "spec": {
+  "strategy": "DonchianBreakout17",
+  "timeframe": "1d",
+  "fee": 0.001,
+  "folds": [
+   {
+    "n": 1,
+    "train": "20210101-20220602",
+    "test": "20220702-20221231",
+    "purge_gap_days": 30
+   },
+   {
+    "n": 2,
+    "train": "20210702-20221201",
+    "test": "20221231-20230701",
+    "purge_gap_days": 30
+   },
+   {
+    "n": 3,
+    "train": "20220101-20230602",
+    "test": "20230702-20231231",
+    "purge_gap_days": 30
+   },
+   {
+    "n": 4,
+    "train": "20220702-20231201",
+    "test": "20231231-20240630",
+    "purge_gap_days": 30
+   },
+   {
+    "n": 5,
+    "train": "20230101-20240601",
+    "test": "20240701-20241230",
+    "purge_gap_days": 30
+   },
+   {
+    "n": 6,
+    "train": "20230702-20241130",
+    "test": "20241230-20250630",
+    "purge_gap_days": 30
+   },
+   {
+    "n": 7,
+    "train": "20240101-20250601",
+    "test": "20250701-20251230",
+    "purge_gap_days": 30
+   }
+  ],
+  "full_timerange": "20210101-20260101",
+  "purge_days": 30,
+  "why": "S5 pre-registered run"
+ },
+ "walkforward": {
+  "folds": [
+   {
+    "fold": 1,
+    "test": "20220702-20221231",
+    "trades": 48,
+    "profit_total": -0.12404331169500002
+   },
+   {
+    "fold": 2,
+    "test": "20221231-20230701",
+    "trades": 35,
+    "profit_total": 0.057517591395000005
+   },
+   {
+    "fold": 3,
+    "test": "20230702-20231231",
+    "trades": 35,
+    "profit_total": 0.12645098045999997
+   },
+   {
+    "fold": 4,
+    "test": "20231231-20240630",
+    "trades": 36,
+    "profit_total": 0.038058097500000006
+   },
+   {
+    "fold": 5,
+    "test": "20240701-20241230",
+    "trades": 42,
+    "profit_total": 0.22816505418500002
+   },
+   {
+    "fold": 6,
+    "test": "20241230-20250630",
+    "trades": 42,
+    "profit_total": -0.09071024412
+   },
+   {
+    "fold": 7,
+    "test": "20250701-20251230",
+    "trades": 44,
+    "profit_total": 0.12683219216000002
+   }
+  ],
+  "mean_oos": 0.051752908555,
+  "positive_folds": 5
+ },
+ "cost_sweep": [
+  {
+   "fee": 0.0,
+   "trades": 416,
+   "profit_total": 0.9981643924499999,
+   "mean_per_trade": 0.047970610259635706
+  },
+  {
+   "fee": 0.0005,
+   "trades": 416,
+   "profit_total": 0.9768929781600001,
+   "mean_per_trade": 0.046923163371284965
+  },
+  {
+   "fee": 0.001,
+   "trades": 416,
+   "profit_total": 0.9556215639449999,
+   "mean_per_trade": 0.04587676288702947
+  },
+  {
+   "fee": 0.002,
+   "trades": 416,
+   "profit_total": 0.9130787354099998,
+   "mean_per_trade": 0.04378709484905651
+  },
+  {
+   "fee": 0.003,
+   "trades": 416,
+   "profit_total": 0.8705359069350002,
+   "mean_per_trade": 0.04170159364953309
+  }
+ ],
+ "full_range": {
+  "trades": 416,
+  "profit_total": 0.9556215639449999,
+  "max_hold_days": 107.0,
+  "best_month": "2021-03",
+  "best_month_share": 0.484
+ },
+ "deflated_sharpe": {
+  "dsr": 0.09114833193532912,
+  "sr0": 0.0823924341450062,
+  "n_trials": 24,
+  "n_obs": 1825,
+  "sr": 0.05355304513616986,
+  "sr_var": 0.0017319837891680507,
+  "skew": 3.6971493089708014,
+  "kurt": 71.90513306857025,
+  "sr_annualized": 1.0231294907416049,
+  "n_ledger_total": 337,
+  "note": "deflated within the comparable-basis family (24 trials, 1d, >=300d); the full ledger holds 337 trials and hyperopt epochs are uncounted, so the true search was wider \u2014 treat DSR as an upper bound"
+ },
+ "gates": [
+  {
+   "gate": "zero_fee_sanity",
+   "passed": true,
+   "reason": "total return at zero fees: +99.82%",
+   "numbers": {
+    "profit_total_at_zero_fee": 0.9981643924499999
+   }
+  },
+  {
+   "gate": "cost_coverage",
+   "passed": true,
+   "reason": "coverage 23.99\u00d7 vs required 3.0\u00d7",
+   "numbers": {
+    "coverage": 23.985305129817853,
+    "gross_edge_per_trade": 0.047970610259635706,
+    "roundtrip_cost": 0.002,
+    "required_multiple": 3.0
+   }
+  }
+ ]
+}

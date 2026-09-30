@@ -46,7 +46,15 @@
    "finished_at": "2026-09-29T22:21:37-0300"
   },
   "S5": {
-   "status": "pending"
+   "status": "killed",
+   "started_at": "2026-09-30T07:10:52-0300",
+   "report": "rejected by human: HG2 verdict (operator, method-validation toy): KILLED on three counts. (1) Protocol: max realized hold 107d violates the prereg's own 30d tripwire \u2014 the purge was undersized and per the signed text the run fails on protocol and may not be re-run with a larger purge under this signature. (2) G-conc: best month 2021-03 carries 48% of total profit vs the 40% ceiling \u2014 the \u00a717 concentration failure the deterministic gates cannot see. (3) G-dsr: DSR 0.091 vs the pre-registered 0.5 floor (skew +3.7, kurt 72). The +99.8% zero-fee total and 24x cost coverage are real but carried by one bull-market position \u2014 exactly the shape the tear-sheet-level review exists to catch.",
+   "data": {
+    "dossier": "artifacts/dossier.json"
+   },
+   "finished_at": "2026-09-30T07:12:20-0300",
+   "completed": true,
+   "rejected_at": "2026-09-30T07:13:12-0300"
   },
   "S6": {
    "status": "pending"
