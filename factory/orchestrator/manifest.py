@@ -16,6 +16,8 @@ STAGE_NAMES = {
 }
 # Human gates that must be signed BEFORE the keyed stage may start.
 HUMAN_GATES_BEFORE = {"S4": "hg1", "S6": "hg2"}
+# Stages that END in needs_human: the gate whose signature acknowledges them.
+STAGE_AWAITS = {"S3": "hg1", "S5": "hg2"}
 TERMINAL = {"killed"}
 STATUSES = {"pending", "running", "passed", "killed", "needs_human"}
 
