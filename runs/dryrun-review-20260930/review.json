@@ -1,0 +1,27 @@
+{
+ "generated_at": "2026-09-30T11:08:05.360405-03:00",
+ "source_dir": "runs/dryrun-review-20260930",
+ "observation": {
+  "snapshots": 42,
+  "ok": 41,
+  "failed": 1,
+  "uptime_ratio": 0.9761904761904762,
+  "first": "2026-09-30T10:47:07+0000",
+  "last": "2026-09-30T14:07:33+0000",
+  "observed_days": 0.14,
+  "states": {
+   "running": 41
+  },
+  "open_trades_max": 0
+ },
+ "trading": {
+  "trades": 0,
+  "open": 0,
+  "closed": 0,
+  "wins": 0,
+  "mean_profit_ratio": null
+ },
+ "parity_report": "# Parity report \u2014 DonchianBreakout17 (2026-09-30)\n\n- no backtest export yet (day-0 window or backtest failure \u2014 see parity_backtest.log)\n- dry-run DB present: yes\n",
+ "review_complete": false,
+ "days_remaining": 29.9
+}

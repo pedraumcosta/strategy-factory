@@ -34,3 +34,7 @@ deploy/user_data/backtest_results/
 deploy/user_data/logs/
 deploy/user_data/*.sqlite*
 deploy/observer_data/
+
+# fetched dry-run raw artifacts (regenerable from the VM)
+runs/dryrun-review-*/snapshots.jsonl
+runs/dryrun-review-*/parity_backtest.log
