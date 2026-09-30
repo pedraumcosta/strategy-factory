@@ -6,7 +6,8 @@
 # Usage: PROJECT=<gcp-project> ZONE=us-central1-a bash provision.sh
 set -euo pipefail
 PROJECT="${PROJECT:?set PROJECT}"
-ZONE="${ZONE:-us-central1-a}"
+# NOTE: Binance geo-blocks US IPs (HTTP 451) — pick a non-US zone.
+ZONE="${ZONE:-europe-west1-b}"
 NAME="${NAME:-factory-dryrun}"
 MACHINE="${MACHINE:-e2-small}"
 
@@ -15,11 +16,14 @@ gcloud compute instances create "$NAME" \
   --machine-type="$MACHINE" \
   --image-family=debian-12 --image-project=debian-cloud \
   --boot-disk-size=20GB \
-  --no-address=false \
   --metadata=startup-script='#!/bin/bash
-    apt-get update && apt-get install -y docker.io docker-compose-v2
-    systemctl enable --now docker
-    usermod -aG docker $(ls /home | head -1) || true'
+    # docker-compose-v2 does not exist on Debian 12; install the plugin binary
+    apt-get update && apt-get install -y docker.io curl
+    mkdir -p /usr/local/lib/docker/cli-plugins
+    curl -sSL https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-x86_64 \
+        -o /usr/local/lib/docker/cli-plugins/docker-compose
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+    systemctl enable --now docker'
 
 echo "waiting for boot..."; sleep 45
 
@@ -29,8 +33,13 @@ tar czf /tmp/factory-deploy.tgz -C "$(dirname "$0")/../.." \
     deploy/strategy deploy/.env.example factory/observer
 gcloud compute scp /tmp/factory-deploy.tgz "$NAME":~ --project="$PROJECT" --zone="$ZONE"
 gcloud compute ssh "$NAME" --project="$PROJECT" --zone="$ZONE" --command='
+  echo "waiting for the startup script to finish installing docker...";
+  for i in $(seq 1 60); do command -v docker >/dev/null && break; sleep 5; done;
+  command -v docker >/dev/null || { echo "docker never appeared"; exit 1; };
   mkdir -p factory-deploy && tar xzf factory-deploy.tgz -C factory-deploy &&
-  cd factory-deploy/deploy && cp .env.example .env &&
+  cd factory-deploy/deploy &&
+  mkdir -p observer_data && sudo chown 1000:1000 observer_data &&
+  cp .env.example .env &&
   sed -i "s/choose-a-long-password/$(openssl rand -hex 24)/" .env &&
   sed -i "s/choose-a-long-random-string/$(openssl rand -hex 32)/" .env &&
   sed -i "s/^DRYRUN_START=.*/DRYRUN_START=$(date -u +%Y%m%d)/" .env &&
