@@ -109,6 +109,23 @@ class Runner:
                 )
 
 
+def replay_from(run_dir: Path, stage: str) -> list[str]:
+    """Reset `stage` and everything after it to pending (artifacts are kept
+    and simply regenerated). For factory defects, not for retrying a judged
+    hypothesis: signed approvals survive only because the artifacts they
+    hash are untouched — if a replayed stage rewrites one, the approval
+    voids itself on the next gate check, which is the design working."""
+    m = mf.load(run_dir)
+    reset = []
+    for s in mf.STAGES[mf.STAGES.index(stage):]:
+        if m.stages[s]["status"] != "pending":
+            m.stages[s] = {"status": "pending",
+                           "replayed_at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+            reset.append(s)
+    mf.save(run_dir, m)
+    return reset
+
+
 def acknowledge(run_dir: Path, stage: str, ) -> None:
     """Clear a completed needs_human stage after its gate was signed.
     Verifies the signature (and that the reviewed artifacts are unchanged)

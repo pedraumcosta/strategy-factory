@@ -1,0 +1,58 @@
+{
+ "run_id": "20260929-221131-toy-method-validation-run",
+ "prompt": "Toy method-validation run #2 (M5 acceptance; run #1 was correctly killed by the noise floor on a 5-pair universe). Same Donchian idea, resized so the estimates honestly clear the screens: long-only breakout on the lab's FULL 17-pair USDT daily universe. Enter when close breaks above the 10-day high; exit when close breaks below the 5-day low; stoploss -10%. Typical hold ~1 week. Anchors: this lab measured for daily trend systems gross edge ~1.2%/trade and, at ~5-day holds, per-trade sd ~4-5%; a 17-pair universe at weekly turnover supplies well over 1000 trades in 8 years. The point is the pipeline, not the strategy.",
+ "created_at": "2026-09-29T22:11:31-0300",
+ "stages": {
+  "S0": {
+   "status": "passed",
+   "started_at": "2026-09-29T22:11:36-0300",
+   "report": "card for DonchianBreakout17",
+   "data": {
+    "name": "DonchianBreakout17"
+   },
+   "finished_at": "2026-09-29T22:13:07-0300"
+  },
+  "S1": {
+   "status": "passed",
+   "started_at": "2026-09-29T22:13:07-0300",
+   "report": "research memo written",
+   "data": {},
+   "finished_at": "2026-09-29T22:15:52-0300"
+  },
+  "S2": {
+   "status": "passed",
+   "started_at": "2026-09-29T22:15:52-0300",
+   "report": "estimate screens clear; measured screens due in S5",
+   "data": {},
+   "finished_at": "2026-09-29T22:15:52-0300"
+  },
+  "S3": {
+   "status": "passed",
+   "started_at": "2026-09-29T22:15:52-0300",
+   "report": "pre-registration drafted \u2014 review artifacts/prereg.md and sign: factory approve 20260929-221131-toy-method-validation-run hg1",
+   "data": {},
+   "finished_at": "2026-09-29T22:18:49-0300",
+   "completed": true,
+   "acknowledged_by": "hg1",
+   "acknowledged_at": "2026-09-29T22:19:15-0300"
+  },
+  "S4": {
+   "status": "passed",
+   "started_at": "2026-09-29T22:20:56-0300",
+   "report": "smoke backtest ran: 55 trades on 20210101-20210901",
+   "data": {
+    "strategy_file": "DonchianBreakout17.py"
+   },
+   "finished_at": "2026-09-29T22:21:37-0300"
+  },
+  "S5": {
+   "status": "pending"
+  },
+  "S6": {
+   "status": "pending"
+  },
+  "S7": {
+   "status": "pending"
+  }
+ }
+}

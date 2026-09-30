@@ -1,0 +1,42 @@
+{
+  "name": "DonchianBreakout17",
+  "premise": "Crypto markets exhibit medium-term trend persistence: once price makes a new multi-day high, herding, momentum-chasing retail flow, and slow diffusion of narrative-driven capital tend to push it further before the move exhausts. A long-only Donchian channel breakout captures this by entering on strength (close above the 10-day high) and exiting on weakness (close below the 5-day low), letting winners run for roughly a week while cutting losers quickly. The asymmetric channel (slow entry, fast exit) is the classic trend-following payoff shape: many small losses, few large wins. Long-only fits crypto's structural upward drift and avoids the borrow/funding complications of shorting spot.",
+  "edge_source": "momentum",
+  "cross_sectional": false,
+  "universe": [
+    "BTC/USDT",
+    "ETH/USDT",
+    "BNB/USDT",
+    "XRP/USDT",
+    "ADA/USDT",
+    "SOL/USDT",
+    "DOGE/USDT",
+    "LTC/USDT",
+    "LINK/USDT",
+    "XLM/USDT",
+    "TRX/USDT",
+    "AVAX/USDT",
+    "ALGO/USDT",
+    "UNI/USDT",
+    "NEAR/USDT",
+    "HBAR/USDT",
+    "ZEC/USDT"
+  ],
+  "timeframe": "1d",
+  "holding_period_days": 7,
+  "estimates": {
+    "gross_edge_per_trade": 0.010,
+    "per_trade_sd": 0.05,
+    "trades_available": 1200
+  },
+  "estimates_basis": "All three numbers are screening inputs anchored on this lab's own prior measurements for daily trend systems, not on backtests of this strategy. Gross edge: the lab measured ~1.2% gross per trade for daily-timeframe trend followers; we haircut that to 1.0% because a fixed 10/5 Donchian with no tuning should sit at or below the class average. Per-trade sd: the lab measured ~4-5% per-trade standard deviation at ~5-day holds; we take the upper end, 5%, since a ~7-day typical hold in crypto is at least that noisy. Trades available: 17 pairs at roughly weekly turnover implies on the order of 10-15 completed trades per pair per year; over ~8 years of daily data, with several pairs (SOL, AVAX, NEAR, etc.) listing later and therefore contributing shorter histories, a conservative round count is ~1200 trades — comfortably above the ~1000 needed for the noise-floor screen that killed run #1 on a 5-pair universe.",
+  "parameters": {
+    "entry_channel_days": 10,
+    "exit_channel_days": 5,
+    "stoploss": -0.10,
+    "timeframe": "1d",
+    "long_only": true,
+    "shift_periods": 1
+  },
+  "provenance": "Direct from the operator's prompt: toy method-validation run #2 for M5 acceptance of the strategy-factory pipeline. Run #1 (same Donchian 10/5 idea on a 5-pair universe) was correctly killed by the noise-floor screen; this run resizes the same idea to the lab's full 17-pair USDT daily universe (taken verbatim from lab/user_data/config.json) so the estimates honestly clear the screens. The strategy itself is the textbook Donchian channel breakout (Donchian, 1960s; popularized by the Turtle Traders). The prompt was specific; the only interpretive choices recorded here are: 'typical hold ~1 week' encoded as holding_period_days=7, channels computed on prior completed daily bars (shift_periods=1) to avoid lookahead, and the gross-edge anchor haircut from 1.2% to 1.0%. The point is the pipeline, not the strategy."
+}

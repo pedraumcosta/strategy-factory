@@ -130,3 +130,20 @@ def test_trial_ledger_only_goes_up(tmp_path):
     assert trials.count(ledger) == 3
     assert trials.count(ledger, run_id="run-a") == 2
     assert trials.count(ledger, kind="backtest") == 2
+
+
+def test_replay_resets_killed_stage_and_after(tmp_path):
+    from factory.orchestrator.runner import replay_from
+
+    def dies(run_dir, m):
+        return StageResult("killed", "factory defect, not a verdict")
+
+    run_dir, r = make_run(tmp_path, {"S0": passed, "S1": dies})
+    r.run_to("S1")
+    assert mf.load(run_dir).stages["S1"]["status"] == "killed"
+    reset = replay_from(run_dir, "S1")
+    assert reset == ["S1"]
+    m = mf.load(run_dir)
+    assert m.stages["S0"]["status"] == "passed"      # untouched
+    assert m.stages["S1"]["status"] == "pending"     # runnable again
+    assert m.next_stage() == "S1"

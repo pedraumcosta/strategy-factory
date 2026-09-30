@@ -41,10 +41,13 @@ def run_agent(prompt: str, cwd: Path, allowed_tools: list[str],
     except ImportError as e:  # pragma: no cover
         raise AgentUnavailable(f"claude-agent-sdk not installed: {e}") from e
 
+    # Headless agents cannot answer permission prompts, so the mode is
+    # bypassPermissions and the real constraint is the per-stage tool
+    # allowlist (no Bash anywhere; S0/S3/S4 get Read/Write only).
     options = ClaudeAgentOptions(
         cwd=str(cwd),
         allowed_tools=allowed_tools,
-        permission_mode="acceptEdits",
+        permission_mode="bypassPermissions",
         system_prompt=system_prompt,
         max_turns=max_turns,
     )

@@ -99,6 +99,12 @@ def cmd_status(args) -> None:
                 print(f"{d.name}  [next: {nxt}]  {m.prompt[:60]}")
 
 
+def cmd_replay(args) -> None:
+    from factory.orchestrator.runner import replay_from
+    reset = replay_from(_run_dir(args.run_id), args.from_stage)
+    print(f"reset to pending: {reset}")
+
+
 def cmd_ledger(args) -> None:
     if not LEDGER.exists():
         print("empty ledger")
@@ -132,6 +138,10 @@ def main() -> None:
     s = sub.add_parser("status"); s.add_argument("run_id", nargs="?")
     s.set_defaults(fn=cmd_status)
     s = sub.add_parser("ledger"); s.set_defaults(fn=cmd_ledger)
+    s = sub.add_parser("replay"); s.add_argument("run_id")
+    s.add_argument("--from", dest="from_stage", required=True,
+                   choices=["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7"])
+    s.set_defaults(fn=cmd_replay)
 
     args = p.parse_args()
     args.fn(args)

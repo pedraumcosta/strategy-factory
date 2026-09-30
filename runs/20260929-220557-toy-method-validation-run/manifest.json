@@ -1,0 +1,45 @@
+{
+ "run_id": "20260929-220557-toy-method-validation-run",
+ "prompt": "Toy method-validation run (M5 acceptance): Donchian breakout, long-only, on BTC/ETH/SOL/BNB/XRP against USDT, daily bars. Enter when close breaks above the 20-day high; exit when close breaks below the 10-day low; stoploss -10%. Typical hold 2-3 weeks. For screening estimates, anchor on this lab's measured prior for daily trend systems: gross edge ~1.2% per trade, per-trade sd ~6%, ~900 trades available over 8 years of 17-pair daily data. This is a method-validation toy: the point is the pipeline, not the strategy.",
+ "created_at": "2026-09-29T22:05:57-0300",
+ "stages": {
+  "S0": {
+   "status": "passed",
+   "started_at": "2026-09-29T22:06:03-0300",
+   "report": "card for DonchianBreakout20",
+   "data": {
+    "name": "DonchianBreakout20"
+   },
+   "finished_at": "2026-09-29T22:07:04-0300"
+  },
+  "S1": {
+   "status": "passed",
+   "started_at": "2026-09-29T22:07:04-0300",
+   "report": "research memo written",
+   "data": {},
+   "finished_at": "2026-09-29T22:10:56-0300"
+  },
+  "S2": {
+   "status": "killed",
+   "started_at": "2026-09-29T22:10:56-0300",
+   "report": "noise_floor: needs \u2265683 trades to resolve a 0.6000% edge at sd 8.00%; history supplies 260",
+   "data": {},
+   "finished_at": "2026-09-29T22:10:56-0300"
+  },
+  "S3": {
+   "status": "pending"
+  },
+  "S4": {
+   "status": "pending"
+  },
+  "S5": {
+   "status": "pending"
+  },
+  "S6": {
+   "status": "pending"
+  },
+  "S7": {
+   "status": "pending"
+  }
+ }
+}

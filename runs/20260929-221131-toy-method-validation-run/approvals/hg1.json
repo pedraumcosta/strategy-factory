@@ -1,0 +1,11 @@
+{
+ "gate": "hg1",
+ "signed_by": "pedraum",
+ "signed_at": "2026-09-29T22:19:15-0300",
+ "notes": "M5 acceptance toy: signed by the factory operator to exercise the HG1 flow; a real hypothesis requires the user's own review and signature.",
+ "artifact_hashes": {
+  "artifacts/prereg.md": "c80944b515d94d0cba6c39372641835869e559384a01220ca041484fccd3e64a",
+  "artifacts/hypothesis.json": "9d54116bba3ae227a2327793b001f9815852623d82c5215de560230691bdfbb5",
+  "artifacts/screen_report.md": "9eedf0845c0835f0d0328c23c70313d04b3adec41daa2c85c9a3968a581a31bc"
+ }
+}

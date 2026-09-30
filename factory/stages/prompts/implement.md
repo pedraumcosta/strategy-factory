@@ -25,5 +25,11 @@ Causality rules (violations killed real strategies here):
   and including the current row.
 - Prefer pandas rolling operations; talib is available but not required.
 
+Execution semantics: do NOT set `order_types`, `entry_pricing`,
+`exit_pricing` or `order_time_in_force` — execution pricing belongs to the
+lab config (limit orders; market entries would error under its
+price_side). Fill semantics are the protocol's business, not the
+strategy's.
+
 Keep it under ~120 lines, comment only where a rule is subtle. Write the
 file, nothing else — no config, no README, no tests.

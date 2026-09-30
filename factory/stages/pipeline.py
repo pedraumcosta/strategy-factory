@@ -37,6 +37,8 @@ FORBIDDEN = [
     (r"iloc\[\s*-1\s*\]", "whole-frame iloc[-1] inside populate_* is a lookahead"),
     (r"\.hyper_opt|IntParameter|DecimalParameter|CategoricalParameter",
      "strategy must not be tunable (Plan §15)"),
+    (r"order_types|entry_pricing|exit_pricing",
+     "execution pricing belongs to the lab config, not the strategy"),
 ]
 
 

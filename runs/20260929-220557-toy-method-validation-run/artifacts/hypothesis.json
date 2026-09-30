@@ -1,0 +1,24 @@
+{
+  "name": "DonchianBreakout20",
+  "premise": "Crypto majors trend on multi-week horizons because flows are momentum-driven: retail attention, funding feedback loops, and slow-moving allocator inflows cause price moves to persist once a fresh multi-week high is printed. A close above the 20-day high signals that buyers have absorbed the recent supply overhang, and the subsequent continuation tends to exceed the cost of the whipsaws; a trailing 10-day-low exit lets winners run for the typical 2-3 week trend leg while cutting failed breakouts quickly, with a -10% stoploss capping single-trade damage in a market where 24/7 gaps and cascading liquidations can outrun channel exits.",
+  "edge_source": "momentum",
+  "cross_sectional": false,
+  "universe": ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT"],
+  "timeframe": "1d",
+  "holding_period_days": 17,
+  "estimates": {
+    "gross_edge_per_trade": 0.01,
+    "per_trade_sd": 0.08,
+    "trades_available": 260
+  },
+  "estimates_basis": "All three numbers are anchored on this lab's measured prior for daily trend systems (gross edge ~1.2% per trade, per-trade sd ~6%, ~900 trades over 8 years of 17-pair daily data), then adjusted for this specific configuration. Gross edge is haircut from 1.2% to 1.0% to be conservative: a plain long-only Donchian channel on 5 large-cap pairs is among the most generic trend expressions, so it should sit at or below the family average. Per-trade sd is raised from the prior's 6% to 8% because 2-3 week holds in crypto carry wider per-trade dispersion than the family average (the realistic band for multi-day crypto holds is 0.05-0.15, and multi-week noise can reach ~15pp); the -10% stoploss truncates the left tail somewhat, which is why 8% rather than higher. Trades available scales the prior's ~900 trades on 17 pairs down to 5 pairs: 900 * 5/17 ~ 265, rounded to 260; a cross-check from first principles (8 years ~ 2900 daily bars per pair, ~15-20 trading days per completed trade, long-only in-market perhaps 35-50% of the time, giving roughly 50-70 trades per pair) lands in the same range. These are screening inputs for a method-validation toy, not promises.",
+  "parameters": {
+    "entry_channel_days": 20,
+    "exit_channel_days": 10,
+    "stoploss": -0.10,
+    "long_only": true,
+    "entry_rule": "close > rolling_max(high_channel=close, 20 days, shifted 1 bar)",
+    "exit_rule": "close < rolling_min(low_channel=close, 10 days, shifted 1 bar)"
+  },
+  "provenance": "Directly from the run prompt: a toy method-validation idea (M5 acceptance) specifying Donchian breakout, long-only, 20-day-high entry / 10-day-low exit / -10% stoploss on BTC/ETH/SOL/BNB/XRP vs USDT at 1d, with screening estimates anchored on the lab's measured prior for daily trend systems. The only interpretive choices made here: channels are computed on closes against the prior 20/10 completed daily bars (shifted one bar so the breakout bar itself is excluded), and holding_period_days is set to 17 as the midpoint of the stated 2-3 week typical hold. This is the classic Donchian/Turtle channel-breakout rule; the strategy content is deliberately generic because the pipeline, not the strategy, is under test."
+}
