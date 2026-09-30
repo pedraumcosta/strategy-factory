@@ -111,6 +111,25 @@ def cmd_replay(args) -> None:
     print(f"reset to pending: {reset}")
 
 
+def cmd_dryrun_review(args) -> None:
+    import time
+    from factory.ledgers import holdout
+    from factory.observer import review
+
+    data_dir = Path(args.data_dir)
+    r = review.assemble(data_dir)
+    (data_dir / "review.json").write_text(json.dumps(r, indent=1))
+    md = review.render(r)
+    (data_dir / "review.md").write_text(md)
+    # the passage of observed time is also holdout accruing on the ledger
+    w = holdout.accrue(ROOT / "ledgers" / "holdout.json",
+                       time.strftime("%Y%m%d"))
+    print(md)
+    print(f"[holdout] accruing window {w['range']}: {w['days']}d, "
+          f"status {w['status']} (matures at {holdout.MATURITY_DAYS}d)")
+    print(f"written: {data_dir}/review.md")
+
+
 def cmd_ledger(args) -> None:
     if not LEDGER.exists():
         print("empty ledger")
@@ -144,6 +163,8 @@ def main() -> None:
     s = sub.add_parser("status"); s.add_argument("run_id", nargs="?")
     s.set_defaults(fn=cmd_status)
     s = sub.add_parser("ledger"); s.set_defaults(fn=cmd_ledger)
+    s = sub.add_parser("dryrun-review"); s.add_argument("data_dir")
+    s.set_defaults(fn=cmd_dryrun_review)
     s = sub.add_parser("reject"); s.add_argument("run_id")
     s.add_argument("stage", choices=["S3", "S5"])
     s.add_argument("--notes", required=True)

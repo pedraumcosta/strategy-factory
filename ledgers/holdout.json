@@ -14,6 +14,12 @@
    "range": "20190101-20201231",
    "status": "clean",
    "note": "the last untouched window; ~11-13 of 17 pairs exist; spans the 2019 bear + COVID crash (Plan \u00a718.2)"
+  },
+  {
+   "range": "20260929-20260930",
+   "status": "accruing",
+   "note": "calendar accrual since 20260929; matures at 180d (Plan \u00a718.2)",
+   "days": 1
   }
  ]
 }

@@ -168,3 +168,27 @@ def test_reject_kills_an_awaiting_stage_with_reasons(tmp_path):
     assert m.next_stage() is None  # terminal
     with pytest.raises(GateRefusal, match="not awaiting"):
         reject(run_dir, "S3", "twice")
+
+
+def test_calendar_accrual_matures_into_a_clean_window(tmp_path):
+    ledger = tmp_path / "holdout.json"
+    holdout.init(ledger)
+    w = holdout.accrue(ledger, "20261101")            # 33 days
+    assert w["status"] == "accruing" and w["days"] == 33
+    assert w["range"] == "20260929-20261101"
+    w = holdout.accrue(ledger, "20261215")            # idempotent update
+    assert w["status"] == "accruing"
+    assert sum(1 for x in holdout.windows(ledger)
+               if x["status"] == "accruing") == 1
+    w = holdout.accrue(ledger, "20270401")            # 184 days -> mature
+    assert w["status"] == "clean"
+    assert holdout.is_clean(ledger, "20260929-20270401")
+    # spending the matured window still demands HG2b
+    from factory.orchestrator import manifest as mf
+    run_dir = mf.new_run("spend accrued", tmp_path / "runs")
+    with pytest.raises(approvals.ApprovalError):
+        holdout.spend(ledger, "20260929-20270401", run_dir)
+    # and a NEW accrual starts behind the matured one
+    w2 = holdout.accrue(ledger, "20270501")
+    assert w2["status"] == "accruing"
+    assert w2["range"] == "20270401-20270501"

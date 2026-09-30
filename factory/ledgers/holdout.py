@@ -23,6 +23,13 @@ SEED = {
 }
 
 
+# Calendar accrual (Plan §18.2: "calendar time regenerates for free" —
+# six months of patience buys a fresh window). Data after the last spent
+# window accrues; it becomes a spendable holdout only at maturity.
+ACCRUAL_START = "20260929"  # day after H3's holdout ended
+MATURITY_DAYS = 180
+
+
 class HoldoutError(RuntimeError):
     pass
 
@@ -57,3 +64,34 @@ def spend(ledger: Path, window: str, run_dir: Path) -> None:
             w["spent_by_run"] = run_dir.name
             w["approval"] = rec["signed_at"]
     ledger.write_text(json.dumps(data, indent=1))
+
+
+def accrue(ledger: Path, as_of: str) -> dict:
+    """Update the calendar-accruing window as of YYYYMMDD. Idempotent: one
+    accruing entry exists at a time; it matures to 'clean' at MATURITY_DAYS
+    and a new accrual then starts behind it. Spending stays HG2b-gated."""
+    from datetime import date, timedelta
+
+    def _d(x: str) -> date:
+        return date(int(x[:4]), int(x[4:6]), int(x[6:8]))
+
+    data = json.loads(ledger.read_text())
+    accruing = [w for w in data["windows"] if w["status"] == "accruing"]
+    start = max([ACCRUAL_START] + [w["range"].split("-")[1]
+                for w in data["windows"] if w["status"] in ("clean", "spent")
+                and w["range"].split("-")[1] >= ACCRUAL_START])
+    if not accruing:
+        w = {"range": f"{start}-{as_of}", "status": "accruing",
+             "note": f"calendar accrual since {start}; matures at {MATURITY_DAYS}d (Plan §18.2)"}
+        data["windows"].append(w)
+    else:
+        w = accruing[0]
+        w["range"] = w["range"].split("-")[0] + f"-{as_of}"
+    a, b = w["range"].split("-")
+    days = (_d(b) - _d(a)).days
+    w["days"] = days
+    if days >= MATURITY_DAYS:
+        w["status"] = "clean"
+        w["matured_at"] = as_of
+    ledger.write_text(json.dumps(data, indent=1))
+    return w
