@@ -27,3 +27,10 @@ notebooks/**/*.executed.ipynb
 .DS_Store
 .idea/
 .vscode/
+
+# deploy runtime state
+deploy/user_data/data/
+deploy/user_data/backtest_results/
+deploy/user_data/logs/
+deploy/user_data/*.sqlite*
+deploy/observer_data/

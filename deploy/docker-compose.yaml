@@ -1,0 +1,55 @@
+# The factory deploy stack (S6): freqtrade DRY-RUN + observer + daily parity.
+# No exchange keys anywhere: dry-run trades on public data. Secrets that do
+# exist (API password, JWT secret) come from .env — never from the tree.
+services:
+  freqtrade:
+    image: ${FT_IMAGE:-freqtradeorg/freqtrade:2026.8}
+    restart: unless-stopped
+    command: >
+      trade --config /freqtrade/user_data/config.json
+      --strategy ${STRATEGY:-DonchianBreakout17}
+      --strategy-path /factory/strategy
+    volumes:
+      - ./user_data:/freqtrade/user_data
+      - ./strategy:/factory/strategy:ro
+    ports:
+      - "127.0.0.1:8080:8080"   # FreqUI/API on localhost only; reach via SSH tunnel
+    environment:
+      FREQTRADE__API_SERVER__PASSWORD: ${FT_API_PASS:?set in .env}
+      FREQTRADE__API_SERVER__JWT_SECRET_KEY: ${FT_JWT_SECRET:?set in .env}
+
+  observer:
+    image: python:3.12-slim
+    restart: unless-stopped
+    depends_on: [freqtrade]
+    command: python /obs/poller.py --out /data
+    volumes:
+      - ../factory/observer:/obs:ro
+      - ./observer_data:/data
+    environment:
+      FT_API_URL: http://freqtrade:8080
+      FT_API_USER: freqtrader
+      FT_API_PASS: ${FT_API_PASS:?set in .env}
+      OBS_INTERVAL_SECS: ${OBS_INTERVAL_SECS:-300}
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+
+  parity:
+    image: ${FT_IMAGE:-freqtradeorg/freqtrade:2026.8}
+    restart: unless-stopped
+    depends_on: [freqtrade]
+    entrypoint: ["/bin/bash", "/obs/parity_loop.sh"]
+    volumes:
+      - ./user_data:/freqtrade/user_data
+      - ./strategy:/factory/strategy:ro
+      - ../factory/observer:/obs:ro
+      - ./observer_data:/data
+    environment:
+      STRATEGY: ${STRATEGY:-DonchianBreakout17}
+      DRYRUN_START: ${DRYRUN_START:?set in .env, e.g. 20260930}
+      ONESHOT: ${ONESHOT:-0}
+      # backtests need no API server; without these the placeholder JWT in
+      # the shared config fails freqtrade's schema validation (minLength 32)
+      FREQTRADE__API_SERVER__ENABLED: "false"
+      FREQTRADE__API_SERVER__JWT_SECRET_KEY: "unused-but-schema-valid-0123456789ab"
+      FREQTRADE__API_SERVER__PASSWORD: "unused-but-schema-valid"
