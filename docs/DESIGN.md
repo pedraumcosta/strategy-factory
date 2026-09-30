@@ -1,9 +1,9 @@
 # strategy-factory — design
 
 Self-contained buildable spec. The *decision record* (why each choice was made, with the
-measured numbers behind every gate) lives in the private TechTrading knowledge folder
-(`Strategy Factory Plan.md`, `Autotrader Plan.md`); section references like "Plan §21"
-point there. This file is what you build from.
+measured numbers behind every gate) is [`PLAN.md`](PLAN.md) beside this file; its section
+references like "Plan §21" point to the private trading-practice record (`Autotrader
+Plan.md`), which stays out of this repo. This file is what you build from.
 
 ## 1. Principles
 

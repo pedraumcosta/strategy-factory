@@ -37,8 +37,9 @@ suite: **the factory must re-kill every one of them, at the right stage, for the
 - Engine room: [`lab/`](lab/) — a freqtrade 2026.8 docker workspace (formerly the standalone
   `freqtrade-lab`, absorbed 2026-09-29) with a 7-fold walk-forward harness, screens and a tear
   sheet. Its own README documents the harness, holdout status and ten hard-won gotchas.
-- Decision record: `Autotrader Plan.md` and `Strategy Factory Plan.md` in the private
-  TechTrading knowledge folder (not in this repo).
+- Decision record: [`docs/PLAN.md`](docs/PLAN.md) — the steering document (status, decisions,
+  M0–M8 execution findings, next steps in its §17). Its `Autotrader Plan §n` references point
+  to the private trading-practice record, which stays out of this repo.
 - Design: established practice for staged multi-agent build pipelines (role-scoped
   workers, manifests, per-stage validators, resume/replay), adapted to strategy
   production — with the common LLM meta-agent orchestrator deliberately replaced by a
