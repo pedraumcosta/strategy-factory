@@ -28,6 +28,17 @@ Write exactly two files into the current directory:
    - "parameters": {name: value} — ALL strategy parameters, fixed a priori,
      right here, before any data is seen. There will be NO tuning later.
    - "provenance": where the idea comes from (the prompt, a paper, a book)
+   - "factor": REQUIRED when cross_sectional is true, omit otherwise —
+     {"expr": "<one expression in the causal factor DSL>"} declaring the
+     ranking score. The DSL (nothing else parses): panels `close`, `volume`;
+     trailing-window functions `ts_ret(x, n)`, `ts_mean(x, n)`, `ts_std(x, n)`,
+     `ts_min(x, n)`, `ts_max(x, n)`, `ts_sum(x, n)`, `ts_lag(x, n)` with n a
+     positive int literal; cross-sectional `cs_rank(x)`, `cs_zscore(x)`;
+     `log(x)`, `abs(x)`, `sign(x)`; and + - * / with numeric literals.
+     Example (classic risk-adjusted momentum):
+     `ts_ret(close, 40) / ts_std(ts_ret(close, 1), 40)`.
+     The expression IS the factor the S2 screen measures; look-ahead is
+     unwritable in this grammar, so write the factor you actually mean.
 
 2. `hypothesis.md` — the same card as prose a human can sanity-check,
    with a final section "## What would kill this" listing the two or three

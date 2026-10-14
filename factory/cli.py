@@ -130,6 +130,28 @@ def cmd_dryrun_review(args) -> None:
     print(f"written: {data_dir}/review.md")
 
 
+def cmd_factor_screen(args) -> None:
+    """Ad-hoc measured factor screen (S1 research aid): judge any causal-DSL
+    expression against ORACLE/NOISE on the registered IS folds. Every run is
+    a trial on the ledger — screens are searches too."""
+    from factory.ledgers import trials
+    from factory.screens.screen import FactorSpec, run_screen
+
+    universe = (args.universe.split(",") if args.universe else
+                ["ADA", "ALGO", "AVAX", "BNB", "BTC", "DOGE", "ETH", "HBAR",
+                 "LINK", "LTC", "NEAR", "SOL", "TRX", "UNI", "XLM", "XRP", "ZEC"])
+    spec = FactorSpec(name=args.name, expr=args.expr, universe=universe,
+                      timeframe=args.timeframe)
+    out_dir = Path(args.out) if args.out else ROOT / "runs" / "adhoc-screens" / args.name
+    res = run_screen(spec, Path(args.data_dir).expanduser(), out_dir)
+    trials.append(LEDGER, "factor_screen", "adhoc",
+                  {"factor": args.name, "expr": args.expr,
+                   "passed": res["verdicts"][args.name].passed,
+                   "calibration_valid": res["valid"]})
+    print(res["report"])
+    print(f"\nCSV: {res['csv']}")
+
+
 def cmd_ledger(args) -> None:
     if not LEDGER.exists():
         print("empty ledger")
@@ -163,6 +185,14 @@ def main() -> None:
     s = sub.add_parser("status"); s.add_argument("run_id", nargs="?")
     s.set_defaults(fn=cmd_status)
     s = sub.add_parser("ledger"); s.set_defaults(fn=cmd_ledger)
+    s = sub.add_parser("factor-screen"); s.add_argument("expr")
+    s.add_argument("--name", default="Candidate")
+    s.add_argument("--universe", default="",
+                   help="comma-separated symbols; default = the 17-pair universe")
+    s.add_argument("--timeframe", default="1d")
+    s.add_argument("--data-dir", default="~/freqtrade-data")
+    s.add_argument("--out", default="")
+    s.set_defaults(fn=cmd_factor_screen)
     s = sub.add_parser("dryrun-review"); s.add_argument("data_dir")
     s.set_defaults(fn=cmd_dryrun_review)
     s = sub.add_parser("reject"); s.add_argument("run_id")

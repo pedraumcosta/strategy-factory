@@ -138,7 +138,10 @@ def research_stage(agent_fn=None, ledger: Path | None = None,
 
 # --- S2 screen (deterministic) ----------------------------------------------
 
-def screen_stage():
+def screen_stage(data_dir: Path | None = None, trial_ledger: Path | None = None):
+    """S2. Estimate screens always; for a cross-sectional card with price
+    data available, ALSO the measured factor screen (Plan §22) — the
+    cheapest kill in the method, run before any fold or holdout is spent."""
     def stage(run_dir, manifest) -> StageResult:
         card = load_card(run_dir)
         est = card["estimates"]
@@ -153,15 +156,60 @@ def screen_stage():
                  "estimates_basis); measured screens follow in S5.", ""]
         for v in verdicts:
             lines.append(f"- {'PASS' if v.passed else '**FAIL**'} `{v.gate}` — {v.reason}")
+        extra_kill = None
         if card.get("cross_sectional"):
-            lines += ["", "**Cross-sectional card: a measured factor screen "
-                          "(ORACLE + NOISE arms) is REQUIRED before S5** (Plan §22)."]
+            factor_card = card.get("factor") or {}
+            expr = factor_card.get("expr")
+            if not expr:
+                extra_kill = ("cross-sectional card declares no factor.expr "
+                              "(causal DSL) — the measured screen (Plan §22) "
+                              "cannot run")
+                lines += ["", f"- **FAIL** `factor_screen` — {extra_kill}"]
+            elif data_dir is None:
+                lines += ["", "**Cross-sectional card: a measured factor "
+                              "screen (ORACLE + NOISE arms) is REQUIRED "
+                              "before S5** (Plan §22) — no price data dir "
+                              "configured, run it manually."]
+            else:
+                from factory.screens.screen import FactorSpec, run_screen
+                try:
+                    res = run_screen(
+                        FactorSpec(name=card["name"], expr=expr,
+                                   universe=card["universe"],
+                                   timeframe=card["timeframe"]),
+                        data_dir, _art(run_dir))
+                except Exception as e:
+                    res = None
+                    extra_kill = f"factor screen failed to run: {e}"
+                    lines += ["", f"- **FAIL** `factor_screen` — {extra_kill}"]
+                if res is not None:
+                    lines += ["", res["report"]]
+                    cand = res["verdicts"][card["name"]]
+                    if trial_ledger:
+                        trials.append(trial_ledger, "factor_screen",
+                                      run_dir.name,
+                                      {"factor": card["name"], "expr": expr,
+                                       "passed": cand.passed,
+                                       "calibration_valid": res["valid"],
+                                       "ic": {str(h): v for h, v in
+                                              cand.ic_by_horizon.items()}})
+                    if not res["valid"]:
+                        extra_kill = ("factor screen calibration INVALID "
+                                      "(ORACLE/NOISE contract broken) — "
+                                      "fix the screen, not the factor")
+                    elif not cand.passed:
+                        extra_kill = f"factor_screen: {cand.reason}"
         (_art(run_dir) / "screen_report.md").write_text("\n".join(lines) + "\n")
         failed = [v for v in verdicts if not v.passed]
-        if failed:
-            return StageResult("killed",
-                               "; ".join(f"{v.gate}: {v.reason}" for v in failed))
-        return StageResult("passed", "estimate screens clear; measured screens due in S5")
+        reasons = [f"{v.gate}: {v.reason}" for v in failed]
+        if extra_kill:
+            reasons.append(extra_kill)
+        if reasons:
+            return StageResult("killed", "; ".join(reasons))
+        return StageResult("passed", "estimate screens clear"
+                           + ("; measured factor screen passed"
+                              if card.get("cross_sectional") and data_dir
+                              else "; measured screens due in S5"))
 
     return stage
 
@@ -277,7 +325,7 @@ def build_stages(engine, trial_ledger: Path, agent_fn=None, today: str = ""):
     return {
         "S0": intake_stage(agent_fn, trial_ledger),
         "S1": research_stage(agent_fn, trial_ledger),
-        "S2": screen_stage(),
+        "S2": screen_stage(getattr(engine, "data_dir", None), trial_ledger),
         "S3": prereg_stage(agent_fn, trial_ledger, today),
         "S4": implement_stage(engine, trial_ledger, agent_fn),
         "S5": validate_stage(engine, trial_ledger),
