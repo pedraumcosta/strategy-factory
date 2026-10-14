@@ -21,7 +21,7 @@ LEDGER = ROOT / "ledgers" / "trials.jsonl"
 # What each gate signs over: the artifacts the human is certifying they read.
 GATE_ARTIFACTS = {
     "hg1": ["prereg.md", "hypothesis.json", "screen_report.md"],
-    "hg2": ["dossier.json", "dossier.md"],
+    "hg2": ["dossier.json", "dossier.md", "tearsheet.png"],
     "hg2b": ["dossier.json", "prereg.md"],
     "hg3": ["dossier.json"],
 }

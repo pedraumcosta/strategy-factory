@@ -137,6 +137,20 @@ def run_validation(engine, spec: ValidateSpec, run_dir: Path,
     except Exception as e:
         dossier["deflated_sharpe"] = {"error": f"unavailable: {e}"}
 
+    # 4 — tear sheet + G-passive (§22/§23) from the same full-range export.
+    # Separate try from DSR: one failing must not drop the other.
+    try:
+        from factory.validation import gpassive
+        curves = gpassive.curves_from_export(full.export_zip, spec.strategy)
+        tear, gp = gpassive.judge(curves, spec.periods_per_year)
+        if gpassive.render_png(curves, spec.strategy, art / "tearsheet.png"):
+            tear["figure"] = "tearsheet.png"
+        dossier["tear_sheet"] = tear
+        dossier["g_passive"] = gp
+    except Exception as e:
+        dossier["tear_sheet"] = {"error": f"unavailable: {e}"}
+        dossier["g_passive"] = {"error": f"unavailable: {e}"}
+
     dossier["gates"] = [
         {"gate": g.gate, "passed": g.passed, "reason": g.reason, "numbers": g.numbers}
         for g in gates
@@ -241,6 +255,51 @@ def _render_md(d: dict) -> str:
         ]
     else:
         lines.append(f"- {ds.get('error', 'not computed')}")
+    ts = d.get("tear_sheet", {})
+    lines += ["", "## Tear sheet (mark-to-market)", ""]
+    if "mtm_total_return" in ts:
+        lines += [
+            f"- total return **{ts['mtm_total_return']:+.2%}**, max drawdown "
+            f"**{ts['mtm_max_drawdown']:.2%}** (daily mark-to-market incl. "
+            f"open positions — stricter than freqtrade's trade-close figures)",
+            f"- annualized Sharpe **{ts['sharpe_annualized']:.2f}** [365-day year]",
+            f"- positive months: {ts['positive_months']} of {ts['months']}",
+        ]
+        if ts.get("best_month_share_mtm") is not None:
+            lines.append(f"- best month {ts['best_month']} = "
+                         f"**{ts['best_month_share_mtm']:.0%}** of total "
+                         f"return (G-conc, MTM basis)")
+        if ts.get("monthly"):
+            lines += ["", "| month | strategy | universe |", "|---|---|---|"]
+            for row in ts["monthly"]:
+                u = f"{row['universe']:+.2%}" if "universe" in row else "—"
+                lines.append(f"| {row['month']} | {row['strategy']:+.2%} | {u} |")
+        if ts.get("figure"):
+            lines.append(f"\n![tear sheet]({ts['figure']})")
+    else:
+        lines.append(f"- {ts.get('error', 'not computed')}")
+    gp = d.get("g_passive", {})
+    lines += ["", "## G-passive (§23 form)", ""]
+    if "pass_sharpe" in gp:
+        lines += [
+            f"- realized exposure **{gp['exposure_mean']:.1%}** — benchmark "
+            f"scaled to it for the return comparison",
+            f"- return: strategy {gp['strategy_total']:+.2%} vs scaled "
+            f"universe {gp['universe_scaled_total']:+.2%} "
+            f"(**{gp['excess_pp_vs_scaled']:+.2f} pp**) → "
+            f"{'PASS' if gp['pass_scaled_return'] else '**FAIL**'}",
+            f"- Sharpe (load-bearing): strategy **{gp['sharpe_strategy']:.2f}** "
+            f"vs universe **{gp['sharpe_universe']:.2f}** → "
+            f"{'PASS' if gp['pass_sharpe'] else '**FAIL**'}",
+            f"- months beaten: {gp['months_beaten']} overall — "
+            f"{gp['up_months_beaten']} in universe-up months, "
+            f"{gp['down_months_beaten']} in universe-down months",
+            f"- raw fully-invested comparison (context only): "
+            f"{gp['excess_pp_raw']:+.2f} pp vs universe "
+            f"{gp['universe_total']:+.2%}",
+        ]
+    else:
+        lines.append(f"- {gp.get('error', 'not computed')}")
     lines += ["", "## Gates", ""]
     for g in d["gates"]:
         lines.append(f"- {'PASS' if g['passed'] else '**FAIL**'} `{g['gate']}` — {g['reason']}")

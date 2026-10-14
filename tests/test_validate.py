@@ -48,8 +48,10 @@ def test_dossier_written_and_trials_counted(tmp_path):
     # 2 folds + 5 sweep + 1 full range, every one on the ledger
     assert sum(1 for _ in open(ledger)) == 8
     assert (run_dir / "artifacts" / "dossier.md").exists()
-    # DSR gracefully unavailable (fake export zip)
+    # DSR and G-passive gracefully unavailable (fake export zip)
     assert "error" in d["deflated_sharpe"]
+    assert "error" in d["g_passive"]
+    assert "G-passive" in (run_dir / "artifacts" / "dossier.md").read_text()
 
 
 def test_never_passes_outright_only_needs_human(tmp_path):
