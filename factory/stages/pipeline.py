@@ -34,11 +34,17 @@ REQUIRED_CARD_FIELDS = [
 FORBIDDEN = [
     (r"shift\(\s*-", "negative shift reads the future"),
     (r"center\s*=\s*True", "centered window reads the future"),
-    (r"iloc\[\s*-1\s*\]", "whole-frame iloc[-1] inside populate_* is a lookahead"),
     (r"\.hyper_opt|IntParameter|DecimalParameter|CategoricalParameter",
      "strategy must not be tunable (Plan §15)"),
     (r"order_types|entry_pricing|exit_pricing",
      "execution pricing belongs to the lab config, not the strategy"),
+]
+# Scoped to populate_* bodies only: there the frame is the full history, so
+# iloc[-1] reads the last bar of the backtest. In runtime callbacks
+# (custom_stake_amount, custom_exit, ...) the analyzed frame is truncated to
+# the current candle and iloc[-1] is "now" — the standard freqtrade pattern.
+FORBIDDEN_IN_POPULATE = [
+    (r"iloc\[\s*-1\s*\]", "whole-frame iloc[-1] inside populate_* is a lookahead"),
 ]
 
 
@@ -270,6 +276,14 @@ def check_strategy_source(src: str, name: str) -> list[str]:
         problems.append("missing INTERFACE_VERSION")
     for pattern, why in FORBIDDEN:
         if re.search(pattern, src):
+            problems.append(f"forbidden pattern /{pattern}/ — {why}")
+    populate_src = "\n".join(
+        ast.get_source_segment(src, n) or ""
+        for n in ast.walk(tree)
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and n.name.startswith("populate"))
+    for pattern, why in FORBIDDEN_IN_POPULATE:
+        if re.search(pattern, populate_src):
             problems.append(f"forbidden pattern /{pattern}/ — {why}")
     return problems
 
