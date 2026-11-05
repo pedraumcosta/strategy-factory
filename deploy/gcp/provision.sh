@@ -7,7 +7,8 @@
 set -euo pipefail
 PROJECT="${PROJECT:?set PROJECT}"
 # NOTE: Binance geo-blocks US IPs (HTTP 451) — pick a non-US zone.
-ZONE="${ZONE:-europe-west1-b}"
+# Verified good: europe-west1 (Belgium), southamerica-east1 (São Paulo).
+ZONE="${ZONE:-southamerica-east1-c}"
 NAME="${NAME:-factory-dryrun}"
 MACHINE="${MACHINE:-e2-small}"
 
