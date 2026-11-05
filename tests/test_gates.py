@@ -84,3 +84,24 @@ def test_noise_arm_fails_the_factor_screen():
     f = GRAVEYARD["h1h3_factor"]
     v = factor.judge_csv(ROOT / f["screen_csv"], "NOISE")
     assert not v.passed
+
+
+# --- §17.10: turnover-aware cost coverage ------------------------------------
+
+def test_cost_coverage_default_turnover_is_the_old_gate():
+    """turnover_per_trade defaults to 1.0 and must be bit-identical to the
+    pre-§17.10 gate — the graveyard's cost kills depend on it."""
+    old = core.cost_coverage(0.000837, 0.001556)
+    explicit = core.cost_coverage(0.000837, 0.001556, turnover_per_trade=1.0)
+    assert old.passed == explicit.passed == False
+    assert old.numbers["coverage"] == explicit.numbers["coverage"]
+
+
+def test_cost_coverage_scales_cost_by_turnover():
+    """A weekly rebalance that transacts 10% of the position pays 10% of a
+    round trip: 0.25% edge against 0.02% effective cost is 12.5x."""
+    v = core.cost_coverage(0.0025, 0.002, turnover_per_trade=0.1)
+    assert v.passed
+    assert abs(v.numbers["coverage"] - 12.5) < 1e-9
+    # the same card charged a full round trip fails — the §17.8 pincer
+    assert not core.cost_coverage(0.0025, 0.002).passed

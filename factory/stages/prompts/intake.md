@@ -21,7 +21,16 @@ Write exactly two files into the current directory:
          fraction (e.g. 0.008 = 0.8%). Be conservative; state where it comes from,
        "per_trade_sd": expected per-trade standard deviation as a fraction —
          for crypto, multi-day holds run 0.05-0.15,
-       "trades_available": rough count of trades ~8 years of data can supply
+       "trades_available": rough count of trades ~8 years of data can supply,
+       "turnover_per_trade": OPTIONAL, default 1.0 — the fraction of the
+         position's value actually transacted per trade. Leave it out for
+         entry/exit strategies (a trade turns the whole position). Set it
+         below 1 ONLY for continuously-rebalanced constructions where one
+         "trade" is a rebalance that moves a sliver of the position (e.g. a
+         weekly reweight of a slow score might transact ~0.10). It scales the
+         cost the 3x rule charges, so it must be DERIVED in estimates_basis
+         (from the score's rate of change and the rebalance interval), never
+         picked to clear the gate
      }
    - "estimates_basis": one paragraph — how the three estimates were reasoned;
      they are screening inputs, not promises
