@@ -1,0 +1,11 @@
+{
+ "gate": "hg1",
+ "signed_by": "pedraum",
+ "signed_at": "2026-11-05T15:30:26-0300",
+ "notes": "HG1 signed by the operator (delegated in-session 2026-11-05): prereg accepted as drafted \u2014 10 backtests, 7d purge, G-cost/G-turn/G-zero/G-wf/G-passive/G-conc/G-dsr, family closes permanently on failure",
+ "artifact_hashes": {
+  "artifacts/prereg.md": "cea873d1ae599c708fddc117c6c757b4cd8c744e1049ee658f566892c0fcba17",
+  "artifacts/hypothesis.json": "e1bb29db06b9ee1deb83f709e8f6b85b95c71f54e2b7e6f57aa8fc00fe075aea",
+  "artifacts/screen_report.md": "f734462aa944b952d63e292ecf273e5fc33ffbe774210289d42803014db3f063"
+ }
+}
