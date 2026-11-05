@@ -145,11 +145,22 @@ def screen_stage(data_dir: Path | None = None, trial_ledger: Path | None = None)
     def stage(run_dir, manifest) -> StageResult:
         card = load_card(run_dir)
         est = card["estimates"]
-        edge_gate = 3 * ROUNDTRIP  # what the 3x rule will demand per trade
+        turnover = float(est.get("turnover_per_trade", 1.0))
+        if not 0 < turnover <= 1:
+            return StageResult(
+                "killed", f"turnover_per_trade {turnover} outside (0, 1] — "
+                          "a trade cannot transact more than its position")
+        # Resolution target (Plan §17.10): the smaller of the claimed edge and
+        # the full-round-trip 3x edge. For turnover-1 cards this is always the
+        # 3x edge (a claim below it dies at cost_coverage anyway), so every
+        # pre-§17.10 verdict is unchanged; for cheap rebalancing tilts the
+        # testability question becomes the claim itself.
+        edge_gate = min(est["gross_edge_per_trade"], 3 * ROUNDTRIP)
         verdicts = [
             core.noise_floor(est["per_trade_sd"], edge_gate,
                              int(est["trades_available"])),
-            core.cost_coverage(est["gross_edge_per_trade"], ROUNDTRIP),
+            core.cost_coverage(est["gross_edge_per_trade"], ROUNDTRIP,
+                               turnover_per_trade=turnover),
         ]
         lines = [f"# Screen report — {card['name']}", "",
                  "Screens run on the card's declared estimates (see "

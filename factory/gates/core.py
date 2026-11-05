@@ -49,18 +49,29 @@ def cost_coverage(
     gross_edge_per_trade: float,
     roundtrip_cost: float,
     required_multiple: float = 3.0,
+    turnover_per_trade: float = 1.0,
 ) -> GateVerdict:
     """Plan §12/§14 R3: gross edge must cover round-trip cost 3×, decided
     before a strategy is written. The 2020 bot died at 0.54× (0.0837 % edge
-    vs 0.1556 % cost); H2 at −0.04×."""
-    coverage = gross_edge_per_trade / roundtrip_cost
+    vs 0.1556 % cost); H2 at −0.04×.
+
+    Plan §17.10: `turnover_per_trade` scales the cost to what the trade
+    actually transacts — a rebalancing tilt that moves 10 % of a position
+    pays 10 % of a round trip, not all of it. Default 1.0 (an entry/exit
+    trade turns the whole position) keeps every pre-§17.10 verdict
+    bit-identical."""
+    effective_cost = roundtrip_cost * turnover_per_trade
+    coverage = gross_edge_per_trade / effective_cost
     ok = coverage >= required_multiple
+    turn = ("" if turnover_per_trade == 1.0
+            else f" (cost scaled by turnover {turnover_per_trade:.0%}/trade)")
     return GateVerdict(
         "cost_coverage",
         ok,
-        f"coverage {coverage:.2f}× vs required {required_multiple:.1f}×",
+        f"coverage {coverage:.2f}× vs required {required_multiple:.1f}×{turn}",
         {"coverage": coverage, "gross_edge_per_trade": gross_edge_per_trade,
-         "roundtrip_cost": roundtrip_cost, "required_multiple": required_multiple},
+         "roundtrip_cost": roundtrip_cost, "required_multiple": required_multiple,
+         "turnover_per_trade": turnover_per_trade, "effective_cost": effective_cost},
     )
 
 

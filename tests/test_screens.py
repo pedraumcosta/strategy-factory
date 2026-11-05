@@ -165,3 +165,47 @@ def test_s2_without_data_dir_keeps_the_old_contract(tmp_path):
     res, run_dir, _ = _run_s2(tmp_path, CARD, None)
     assert res.status == "passed"
     assert "REQUIRED" in (run_dir / "artifacts" / "screen_report.md").read_text()
+
+
+# --- §17.10: the estimate screens on tilt-style cards --------------------------
+
+TILT_EST = {"gross_edge_per_trade": 0.0025, "per_trade_sd": 0.07,
+            "trades_available": 4200, "turnover_per_trade": 0.1}
+
+
+def _est_card(est):
+    card = {**CARD, "cross_sectional": False, "estimates": est}
+    card.pop("factor")
+    return card
+
+
+def test_s2_passes_a_cheap_tilt_on_both_estimate_gates(tmp_path):
+    """The §17.8 pincer, resolved: per-trade accounting of a 10%-turnover
+    weekly tilt clears cost coverage (12.5x) AND the noise floor (the
+    resolution target is the claimed 0.25%, needing ~3013 of 4200 holds)."""
+    res, run_dir, _ = _run_s2(tmp_path, _est_card(TILT_EST), None)
+    assert res.status == "passed"
+    report = (run_dir / "artifacts" / "screen_report.md").read_text()
+    assert "PASS `noise_floor`" in report
+    assert "PASS `cost_coverage`" in report
+
+
+def test_s2_full_turnover_verdicts_are_unchanged(tmp_path):
+    """No weakening: with turnover 1.0 (or omitted) a thin claim still dies
+    at cost coverage, and the first LowVol card's noise-floor kill
+    (0.6% at sd 12%, 1500 < 1537) reproduces exactly."""
+    thin = {"gross_edge_per_trade": 0.0025, "per_trade_sd": 0.07,
+            "trades_available": 4200}
+    res, _, _ = _run_s2(tmp_path / "thin", _est_card(thin), None)
+    assert res.status == "killed" and "cost_coverage" in res.report
+    first = {"gross_edge_per_trade": 0.006, "per_trade_sd": 0.12,
+             "trades_available": 1500}
+    res, _, _ = _run_s2(tmp_path / "first", _est_card(first), None)
+    assert res.status == "killed"
+    assert "needs ≥1537" in res.report and "noise_floor" in res.report
+
+
+def test_s2_kills_an_impossible_turnover(tmp_path):
+    res, _, _ = _run_s2(tmp_path, _est_card({**TILT_EST, "turnover_per_trade": 1.4}), None)
+    assert res.status == "killed"
+    assert "turnover_per_trade" in res.report
