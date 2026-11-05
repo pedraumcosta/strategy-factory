@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>strategy-factory — DESIGN explainer</title>
+
+<!-- === FONTS: Zodiak (display serif) + Supreme (body) via Fontshare, Spline Sans Mono via Google === -->
+<link rel="preconnect" href="https://api.fontshare.com">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=zodiak@400,500,700&f[]=supreme@400,500,700&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+
+<style>
+/* ===========================================
+   THEME — "research ledger" system
+   Shared across the three strategy-factory decks.
+   =========================================== */
+:root {
+    --stage-bg: #060807;
+    --slide-bg: #0c100e;
+    --panel:    #131814;
+    --panel-2:  #181e1a;
+    --cream:    #ede8da;
+    --muted:    #99a193;
+    --amber:    #e2a23c;
+    --amber-dim:rgba(226,162,60,.14);
+    --red:      #d85c43;
+    --green:    #87b87b;
+    --line:     rgba(237,232,218,.13);
+
+    --font-display: 'Zodiak', Georgia, serif;
+    --font-body: 'Supreme', sans-serif;
+    --font-mono: 'Spline Sans Mono', monospace;
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-normal: 0.7s;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   (viewport-base.css, included in full)
+   =========================================== */
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+.deck-viewport {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+.deck-stage {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    transform-origin: 0 0;
+    background: var(--slide-bg, #fff);
+}
+.slide {
+    position: absolute;
+    inset: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    background: var(--slide-bg, #fff);
+}
+.slide.active,
+.slide.visible {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 1;
+}
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+.deck-controls {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    z-index: 1000;
+}
+@media print {
+    html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+    .deck-viewport { position: static; overflow: visible; background: #fff; }
+    .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+    .slide {
+        position: relative;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        width: 1920px; height: 1080px;
+        break-after: page; page-break-after: always;
+    }
+    .slide:last-child { break-after: auto; page-break-after: auto; }
+    .deck-controls { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
+    }
+}
+
+/* ===========================================
+   LEDGER-PAGE ATMOSPHERE
+   =========================================== */
+.slide {
+    color: var(--cream);
+    font-family: var(--font-body);
+    background:
+        linear-gradient(rgba(237,232,218,.025) 1px, transparent 1px) 0 0 / 100% 54px,
+        radial-gradient(ellipse at 75% -10%, rgba(226,162,60,.07) 0%, transparent 55%),
+        var(--slide-bg);
+}
+.slide::before {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; left: 120px;
+    width: 2px;
+    background: rgba(216,92,67,.30);
+}
+.slide::after {
+    content: '';
+    position: absolute;
+    inset: 26px;
+    border: 1px solid var(--line);
+    pointer-events: none;
+}
+
+/* ===========================================
+   SLIDE SCAFFOLD
+   =========================================== */
+.slide-inner { position: absolute; inset: 0; padding: 86px 110px 110px 170px; }
+.eyebrow {
+    font-family: var(--font-mono);
+    font-size: 21px;
+    letter-spacing: .32em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 22px;
+}
+h1 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 140px;
+    line-height: 1.0;
+    letter-spacing: -0.015em;
+}
+h2 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 62px;
+    line-height: 1.05;
+    margin-bottom: 40px;
+}
+h2 em { font-style: italic; color: var(--amber); }
+p.lede { font-size: 31px; line-height: 1.5; color: var(--cream); max-width: 1300px; }
+p.lede strong { color: var(--amber); font-weight: 600; }
+
+.slide-foot {
+    position: absolute;
+    left: 170px; right: 110px; bottom: 48px;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 18px;
+    color: var(--muted);
+    letter-spacing: .08em;
+}
+.slide-foot .doc { color: var(--amber); }
+
+/* ===========================================
+   COMPONENTS
+   =========================================== */
+.chip-row { display: flex; gap: 18px; flex-wrap: wrap; }
+.chip {
+    font-family: var(--font-mono);
+    font-size: 21px;
+    padding: 12px 24px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--muted);
+    background: var(--panel);
+}
+.chip.hot { color: var(--amber); border-color: rgba(226,162,60,.45); background: var(--amber-dim); }
+
+.pipe { display: flex; align-items: stretch; }
+.pipe .st {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 10px 16px;
+    text-align: center;
+    position: relative;
+}
+.pipe .st + .st { margin-left: 34px; }
+.pipe .st + .st::before {
+    content: '►';
+    position: absolute;
+    left: -27px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 15px;
+}
+.pipe .st .code { font-family: var(--font-mono); font-size: 19px; color: var(--amber); letter-spacing: .12em; }
+.pipe .st .name { font-family: var(--font-display); font-size: 28px; margin-top: 6px; }
+.pipe .st.gated { border-color: rgba(226,162,60,.55); background: linear-gradient(180deg, var(--amber-dim), var(--panel)); }
+.pipe .st.killer { border-color: rgba(216,92,67,.55); }
+.pipe .st .tag {
+    position: absolute;
+    top: -17px; left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 16px;
+    letter-spacing: .12em;
+    padding: 3px 12px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.pipe .st.gated .tag { background: var(--amber); color: #171204; }
+.pipe .st.killer .tag { background: var(--red); color: #1a0803; }
+
+.cards { display: grid; gap: 28px; }
+.card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 32px 36px;
+    position: relative;
+}
+.card .k {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 14px;
+}
+.card h3 { font-family: var(--font-display); font-size: 35px; font-weight: 500; margin-bottom: 13px; }
+.card p { font-size: 23px; line-height: 1.5; color: var(--muted); }
+.card p strong { color: var(--cream); font-weight: 600; }
+.card .num {
+    position: absolute;
+    top: 24px; right: 32px;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 52px;
+    color: rgba(237,232,218,.13);
+}
+
+/* ledger table */
+table.ltable { width: 100%; border-collapse: collapse; }
+table.ltable th {
+    font-family: var(--font-mono);
+    font-size: 19px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    text-align: left;
+    padding: 0 22px 14px 22px;
+    border-bottom: 2px solid rgba(226,162,60,.4);
+}
+table.ltable td {
+    font-size: 22px;
+    line-height: 1.45;
+    color: var(--muted);
+    padding: 17px 22px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+}
+table.ltable td.c1 { font-family: var(--font-mono); color: var(--cream); white-space: nowrap; font-size: 21px; }
+table.ltable td strong { color: var(--cream); font-weight: 600; }
+table.ltable td .kill { color: var(--red); font-family: var(--font-mono); font-size: 20px; }
+table.ltable td .mono { font-family: var(--font-mono); font-size: 20px; color: var(--cream); }
+
+.stamp {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    letter-spacing: .3em;
+    text-transform: uppercase;
+    border: 3px solid currentColor;
+    border-radius: 8px;
+    padding: 10px 26px 10px 32px;
+    transform: rotate(-4deg);
+    opacity: .92;
+    white-space: nowrap;
+}
+.stamp.kill { color: var(--red); }
+.stamp.pass { color: var(--green); }
+.stamp.sign { color: var(--amber); }
+
+.banner {
+    border: 1px solid rgba(226,162,60,.4);
+    background: linear-gradient(90deg, var(--amber-dim), transparent 70%);
+    border-radius: 14px;
+    padding: 28px 40px;
+    display: flex;
+    align-items: center;
+    gap: 44px;
+}
+.banner p { font-family: var(--font-display); font-size: 31px; line-height: 1.35; }
+.banner p strong { color: var(--amber); font-weight: 600; }
+.banner.red { border-color: rgba(216,92,67,.4); background: linear-gradient(90deg, rgba(216,92,67,.10), transparent 70%); }
+.banner.red p strong { color: var(--red); }
+
+/* file-tree block: two-column grid so descriptions never wrap under paths */
+.tree {
+    font-family: var(--font-mono);
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--muted);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 28px 34px;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    column-gap: 20px;
+    row-gap: 13px;
+    align-content: start;
+}
+.tree b { color: var(--amber); font-weight: 500; white-space: nowrap; }
+.tree i { color: var(--cream); font-style: normal; }
+
+.reveal {
+    opacity: 0;
+    transform: translateY(26px);
+    transition: opacity var(--duration-normal) var(--ease-out-expo),
+                transform var(--duration-normal) var(--ease-out-expo);
+}
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.reveal:nth-child(1) { transition-delay: .05s; }
+.reveal:nth-child(2) { transition-delay: .15s; }
+.reveal:nth-child(3) { transition-delay: .25s; }
+.reveal:nth-child(4) { transition-delay: .35s; }
+.reveal:nth-child(5) { transition-delay: .45s; }
+.reveal:nth-child(6) { transition-delay: .55s; }
+
+/* ===========================================
+   DECK CHROME
+   =========================================== */
+.progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: var(--amber);
+    z-index: 1001;
+    transition: width .35s var(--ease-out-expo);
+}
+.counter {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: .15em;
+    color: var(--muted);
+    background: rgba(12,16,14,.7);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 18px;
+}
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle {
+    position: fixed; top: 16px; left: 16px;
+    z-index: 10001;
+    font-size: 18px;
+    background: var(--panel-2);
+    color: var(--cream);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s ease;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+.edit-toggle.active { border-color: var(--amber); color: var(--amber); }
+body.editing [contenteditable="true"]:hover { outline: 1px dashed rgba(226,162,60,.6); }
+body.editing [contenteditable="true"]:focus { outline: 2px solid var(--amber); }
+</style>
+</head>
+<body>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage" aria-label="strategy-factory DESIGN explainer">
+
+<!-- ================= SLIDE 1 — TITLE ================= -->
+<section class="slide active" aria-label="Title">
+  <div class="slide-inner" style="display:flex; flex-direction:column; justify-content:center;">
+    <div class="eyebrow reveal">TechTrading · strategy-factory · docs/DESIGN.md</div>
+    <h1 class="reveal">The buildable <em style="font-style:italic; color:var(--amber);">spec</em></h1>
+    <p class="lede reveal" style="margin-top:44px;">
+      Self-contained: <strong>this file is what you build from.</strong> The decision record —
+      why each choice was made, with the measured numbers behind every gate — is PLAN.md
+      beside it (deck 3).
+    </p>
+    <div class="chip-row reveal" style="margin-top:56px;">
+      <span class="chip hot">4 principles</span>
+      <span class="chip">8 stages · 3 human gates</span>
+      <span class="chip">9 gates, each with a kill fixture</span>
+      <span class="chip">roadmap M0–M8</span>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/DESIGN.md</span><span>strategy-factory · explainer 2 of 3</span></div>
+</section>
+
+<!-- ================= SLIDE 2 — PRINCIPLES ================= -->
+<section class="slide" aria-label="Principles">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§1 Principles</div>
+    <h2 class="reveal">Four commitments <em>everything else follows from</em></h2>
+    <div class="cards" style="grid-template-columns: 1fr 1fr; margin-top:14px;">
+      <div class="card reveal">
+        <div class="num">01</div>
+        <h3>Deterministic core, LLM edges</h3>
+        <p>The orchestrator is a <strong>plain state machine over manifests</strong>. Claude Agent
+        SDK sessions run <em>inside</em> Intake / Research / Pre-register / Implement with scoped
+        prompts and tool allowlists. LLM output never self-certifies — <strong>deterministic gates
+        decide every transition.</strong></p>
+      </div>
+      <div class="card reveal">
+        <div class="num">02</div>
+        <h3>A factory is a multiple-comparisons machine</h3>
+        <p>By default, automation just multiplies trials. The structural answers: an append-only
+        <strong>trial ledger</strong> (makes deflated Sharpe computable), a <strong>holdout
+        lockout</strong> (unmountable without a signed approval), and <strong>pre-registration as a
+        blocking human gate</strong> before any fold runs.</p>
+      </div>
+      <div class="card reveal">
+        <div class="num">03</div>
+        <h3>The graveyard is the test suite</h3>
+        <p>Six hypotheses were manually tested and killed in Sep 2026, each for a measured,
+        diagnosed reason. Their recorded numbers are fixtures: <strong>the factory must re-kill
+        each at the right stage for the right reason.</strong></p>
+      </div>
+      <div class="card reveal">
+        <div class="num">04</div>
+        <h3>The engine is freqtrade, across a process boundary</h3>
+        <p>The factory shells out to the in-repo lab's docker images —
+        <strong>freqtrade-lab:2026.8</strong> for backtests, <strong>:2026.8-research</strong> for
+        screens/tear sheets, never mixed (the research image downgrades pandas). Strategies run
+        via <strong>--strategy-path</strong>; the lab's tree is never written to.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/DESIGN.md §1</span><span>principles</span></div>
+</section>
+
+<!-- ================= SLIDE 3 — PIPELINE & CONTRACT ================= -->
+<section class="slide" aria-label="Pipeline and stage contract">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§2 Pipeline</div>
+    <h2 class="reveal">Every stage honors <em>one contract</em></h2>
+    <div class="pipe reveal" style="margin-top:46px;">
+      <div class="st"><div class="code">S0</div><div class="name">Intake</div></div>
+      <div class="st"><div class="code">S1</div><div class="name">Research</div></div>
+      <div class="st killer"><div class="tag">AUTO-KILL</div><div class="code">S2</div><div class="name">Screen</div></div>
+      <div class="st gated"><div class="tag">HG1</div><div class="code">S3</div><div class="name">Pre-reg</div></div>
+      <div class="st"><div class="code">S4</div><div class="name">Implement</div></div>
+      <div class="st gated"><div class="tag">HG2+HG2b</div><div class="code">S5</div><div class="name">Validate</div></div>
+      <div class="st gated"><div class="tag">HG3</div><div class="code">S6</div><div class="name">Deploy</div></div>
+      <div class="st"><div class="code">S7</div><div class="name">Observe</div></div>
+    </div>
+    <div class="cards reveal" style="grid-template-columns: repeat(4, 1fr); margin-top:62px;">
+      <div class="card"><div class="k">read</div><p><strong>manifest.json</strong> + prior artifacts — the run directory is the whole truth.</p></div>
+      <div class="card"><div class="k">write</div><p>Its artifacts + <strong>a short report</strong> into the run directory.</p></div>
+      <div class="card"><div class="k">append</div><p>To the <strong>trial ledger</strong>, whenever anything ran on data.</p></div>
+      <div class="card"><div class="k">end</div><p><span class="mono" style="font-family:var(--font-mono); color:var(--green);">passed</span> · <span style="font-family:var(--font-mono); color:var(--red);">killed</span> · <span style="font-family:var(--font-mono); color:var(--amber);">needs_human</span></p></div>
+    </div>
+    <div class="banner reveal" style="margin-top:44px;">
+      <span class="stamp sign">hash-signed</span>
+      <p><strong>Approvals are signatures over hashes.</strong> <span style="font-family:var(--font-mono); font-size:26px;">factory approve &lt;run&gt; &lt;gate&gt;</span> records who/when/artifact-hash — if upstream artifacts change after signing, the orchestrator refuses to advance until re-approved.</p>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/DESIGN.md §2</span><span>pipeline · stage contract</span></div>
+</section>
+
+<!-- ================= SLIDE 4 — STAGES S0–S3 ================= -->
+<section class="slide" aria-label="Stages S0 to S3">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§2 Stages · upstream half</div>
+    <h2 class="reveal">S0–S3 — from prompt to <em>signed pre-registration</em></h2>
+    <table class="ltable reveal">
+      <thead><tr><th style="width:230px;">Stage</th><th style="width:220px;">Kind</th><th>Output</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="c1">S0 Intake</td><td>LLM</td>
+          <td><strong>Hypothesis card</strong> (hypothesis.md / .json): premise, edge source, universe,
+          timeframe, holding period, <strong>a-priori parameter priors</strong>, provenance.</td>
+        </tr>
+        <tr>
+          <td class="c1">S1 Research</td><td>LLM</td>
+          <td><strong>research.md with citations</strong> — local materials first, then web; must name
+          each source's cost model (usually absent) and check the known anti-patterns.</td>
+        </tr>
+        <tr>
+          <td class="c1">S2 Screen</td><td>Deterministic</td>
+          <td><strong>screen_report.md</strong> — cheap kills in order: noise floor, 3× cost rule, factor
+          screen (cross-sectional only, with ORACLE + NOISE arms), spread screen + random-entry
+          controls. In-sample data only. <span class="kill">Most hypotheses should die here.</span></td>
+        </tr>
+        <tr>
+          <td class="c1">S3 Pre-register</td><td>LLM draft → <strong style="color:var(--amber);">HG1</strong></td>
+          <td><strong>prereg.md</strong>: fixed parameters, pass criteria, protocol, trial budget,
+          committed consequences. <strong>Signed by the human before anything downstream runs.</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/DESIGN.md §2</span><span>stages S0–S3</span></div>
+</section>
+
+<!-- ================= SLIDE 5 — STAGES S4–S7 ================= -->
+<section class="slide" aria-label="Stages S4 to S7">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§2 Stages · downstream half</div>
+    <h2 class="reveal">S4–S7 — from code to <em>a watched dry-run</em></h2>
+    <table class="ltable reveal">
+      <thead><tr><th style="width:230px;">Stage</th><th style="width:250px;">Kind</th><th>Output</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="c1">S4 Implement</td><td>LLM + checks</td>
+          <td><strong>strategy.py + config.json</strong> in the run dir; static checks; smoke backtest on
+          a small in-sample window; freqtrade lookahead-analysis (single-strategy mode only — invalid
+          for cross-sectional designs); a generated causal test (truncated-vs-full dataframe equality).</td>
+        </tr>
+        <tr>
+          <td class="c1">S5 Validate</td><td>Deterministic → <strong style="color:var(--amber);">HG2</strong></td>
+          <td><strong>Dossier</strong>: purged + embargoed walk-forward, control arms (untuned defaults
+          AND exposure-scaled passive), cost sweep, robustness grid, tear sheet (mark-to-market,
+          365-day annualization), <strong>deflated Sharpe from the ledger</strong>, cross-provider
+          integrity audit; papermill review notebook. Holdout spend is a <strong>separate signature
+          (HG2b)</strong>.</td>
+        </tr>
+        <tr>
+          <td class="c1">S6 Deploy</td><td>Deterministic + <strong style="color:var(--amber);">HG3</strong></td>
+          <td>Docker compose to a VM: freqtrade <strong>dry_run: true</strong> + FreqUI
+          (localhost-bound) + observer. Secrets env-only. <strong>Target: a 30-day dry run.</strong></td>
+        </tr>
+        <tr>
+          <td class="c1">S7 Observe</td><td>Service</td>
+          <td>REST-API poller → <strong>append-only parquet snapshots</strong>; daily
+          dry-run-vs-backtest parity check; Telegram alerts on errors/drift/silence; observation
+          notebook.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/DESIGN.md §2</span><span>stages S4–S7</span></div>
+</section>
+
+<!-- ================= SLIDE 6 — GATES I ================= -->
+<section class="slide" aria-label="Gates part one">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§3 Gates · the cheap kills (S2)</div>
+    <h2 class="reveal">Screen gates — <em>each calibrated on a corpse</em></h2>
+    <table class="ltable reveal">
+      <thead><tr><th style="width:290px;">Gate</th><th>Test</th><th style="width:480px;">Kills fixture</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="c1">Noise floor</td>
+          <td>Per-trade sd at intended holding period vs the edge gate; trades needed
+          <span class="mono">≈ (sd/edge)²·k</span> vs trades the history supplies. Gate inside error
+          bars ⇒ untestable ⇒ kill.</td>
+          <td><span class="kill">H4 Kalman hedge-ratio spread</span> — sd ≈ 15 pp vs 0.6 % gate</td>
+        </tr>
+        <tr>
+          <td class="c1">Cost rule</td>
+          <td>Gross edge per trade must be <strong>≥ 3× round-trip cost</strong> at the intended
+          timeframe.</td>
+          <td><span class="kill">H2 trend-following</span> — −0.04× coverage</td>
+        </tr>
+        <tr>
+          <td class="c1">Zero-fee sanity</td>
+          <td>Negative at zero cost ⇒ <strong>no signal at all</strong>.</td>
+          <td><span class="kill">Strategy005</span> — −49.55 % at zero fees</td>
+        </tr>
+        <tr>
+          <td class="c1">Factor screen</td>
+          <td>IC per horizon with t-stats, quintile forward returns, turnover — always beside an
+          <strong>ORACLE (look-ahead) arm</strong> and a <strong>NOISE arm</strong> for scale.</td>
+          <td><span class="kill">H1/H3 factor</span> — IC negative at 9/9 horizons</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/DESIGN.md §3</span><span>gates 1–4 of 9</span></div>
+</section>
+
+<!-- ================= SLIDE 7 — GATES II ================= -->
+<section class="slide" aria-label="Gates part two">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§3 Gates · the deep kills (S5)</div>
+    <h2 class="reveal">Validation gates — <em>what screens can't see</em></h2>
+    <table class="ltable reveal">
+      <thead><tr><th style="width:290px;">Gate</th><th>Test</th><th style="width:460px;">Kills fixture</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="c1">Control arm</td>
+          <td>Candidate must beat <strong>its own untuned defaults</strong> out-of-sample.</td>
+          <td><span class="kill">H1 tuned</span> — lost 6 of 7 folds</td>
+        </tr>
+        <tr>
+          <td class="c1">G-passive</td>
+          <td>Equal-weight buy-and-hold of the same universe, <strong>scaled to realized
+          exposure</strong>, compared on Sharpe, split by rising/falling windows.</td>
+          <td><span class="kill">H3 five-year</span> — Sharpe 0.81 vs 1.64</td>
+        </tr>
+        <tr>
+          <td class="c1">Concentration</td>
+          <td>Tear-sheet level only — <strong>provably not screenable in-sample</strong>: share of
+          profit in best month / trade cluster.</td>
+          <td><span class="kill">H3 holdout</span> — one month = 78 % of profit</td>
+        </tr>
+        <tr>
+          <td class="c1">Deflated Sharpe</td>
+          <td>Bailey / López de Prado DSR using <strong>the trial count from the ledger, never a
+          guess</strong>.</td>
+          <td><span class="mono">calibrated at M4</span></td>
+        </tr>
+        <tr>
+          <td class="c1">Data integrity</td>
+          <td>Gaps, duplicate/missing candles, zero-volume stretches, <strong>cross-provider deviation
+          bands</strong> (bands, not equality — venues differ).</td>
+          <td><span class="mono">synthetic corruption fixtures</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/DESIGN.md §3</span><span>gates 5–9 of 9</span></div>
+</section>
+
+<!-- ================= SLIDE 8 — LAYOUT ================= -->
+<section class="slide" aria-label="Repository layout">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§4 Layout</div>
+    <h2 class="reveal">Where everything <em>lives</em></h2>
+    <div class="reveal" style="display:grid; grid-template-columns: 1.05fr 1fr; gap:44px; margin-top:6px;">
+      <div class="tree">
+        <b>factory/orchestrator/</b><span><i>state machine · manifests · approvals · resume/replay</i></span>
+        <b>factory/stages/</b><span><i>S0–S7 · LLM stages via Claude Agent SDK</i></span>
+        <b>factory/gates/</b><span><i>§3 as pure functions</i></span>
+        <b>factory/engine/</b><span><i>freqtrade adapter over the lab's docker images</i></span>
+        <b>factory/datafeed/</b><span><i>providers · integrity · research/ vs holdout/</i></span>
+        <b>factory/ledgers/</b><span><i>trials.jsonl · holdout.json — append-only</i></span>
+        <b>factory/observer/</b><span><i>S7 poller + parity + alerts</i></span>
+        <b>notebooks/</b><span><i>papermill templates per human gate</i></span>
+        <b>runs/&lt;id&gt;/</b><span><i>manifest + approvals tracked · artifacts gitignored</i></span>
+        <b>lab/</b><span><i>the engine room: freqtrade workspace + wf/ harness</i></span>
+        <b>fixtures/</b><span><i>the graveyard: the six dead hypotheses</i></span>
+        <b>deploy/</b><span><i>compose + VM runbook</i></span>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:28px;">
+        <div class="card">
+          <div class="k">Manifest-first state</div>
+          <p><strong>The run directory is authoritative</strong>; any SQLite index is derived. Resume
+          restarts an interrupted stage; replay from an earlier stage with changed inputs is a
+          <strong>new trial</strong>, and the ledger records it.</p>
+        </div>
+        <div class="card">
+          <div class="k">Tech &amp; CLI</div>
+          <p>Python 3.12 · uv · Claude Agent SDK · papermill · pytest · docker.</p>
+          <p style="font-family:var(--font-mono); font-size:22px; color:var(--amber); margin-top:16px;">
+          factory new | run | approve | status | replay</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/DESIGN.md §4</span><span>layout · state · tech</span></div>
+</section>
+
+<!-- ================= SLIDE 9 — DATA ================= -->
+<section class="slide" aria-label="Data">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§5 Data</div>
+    <h2 class="reveal">Two providers, <em>two partitions</em></h2>
+    <div class="cards" style="grid-template-columns: 1fr 1fr; margin-top:16px;">
+      <div class="card reveal">
+        <div class="k">Primary — Binance</div>
+        <p>OHLCV via <strong>freqtrade download-data</strong>. Bulk data lives outside the repo and
+        outside file sync (<span style="font-family:var(--font-mono); font-size:21px;">~/freqtrade-data/</span> convention) — regenerable, never committed.</p>
+      </div>
+      <div class="card reveal">
+        <div class="k">Secondary — ccxt, second exchange</div>
+        <p><strong>Integrity cross-check only, never backtested.</strong> Catches gaps, duplicates and
+        bad files via deviation bands — venues legitimately differ, so bands, not equality.</p>
+      </div>
+      <div class="card reveal">
+        <div class="k">research/ vs holdout/</div>
+        <p>The store is <strong>partitioned by date range</strong>. Research runs mount
+        <span style="font-family:var(--font-mono); font-size:21px;">research/</span> only; mounting
+        <span style="font-family:var(--font-mono); font-size:21px;">holdout/</span> takes a signed
+        HG2b token, and the spend is permanent.</p>
+      </div>
+      <div class="card reveal">
+        <div class="k">The holdout ledger's opening balance</div>
+        <p>Seeded from the predecessor project: <strong>2021–2025 folds spent, 2026 spent,
+        2019–2020 the last clean window</strong> — and the calendar accrues new windows from here.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/DESIGN.md §5</span><span>data</span></div>
+</section>
+
+<!-- ================= SLIDE 10 — ROADMAP ================= -->
+<section class="slide" aria-label="Roadmap">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§6 Roadmap</div>
+    <h2 class="reveal">M0–M8: <em>spine first, agents after</em></h2>
+    <table class="ltable reveal" style="margin-top:-6px;">
+      <thead><tr><th style="width:110px;">M</th><th>Delivers</th><th style="width:560px;">Done when</th></tr></thead>
+      <tbody>
+        <tr><td class="c1">M0</td><td>Scaffold</td><td>pushed</td></tr>
+        <tr><td class="c1">M1</td><td><strong>Engine adapter + golden test</strong>: rerun a fixed reference backtest through the lab image</td><td>recorded result matched exactly — trade count, timestamps, P&amp;L</td></tr>
+        <tr><td class="c1">M2</td><td><strong>gates/ + graveyard fixtures</strong></td><td>every dead hypothesis re-killed by the right gate</td></tr>
+        <tr><td class="c1">M3</td><td><strong>Orchestrator</strong>, manifests, approvals, both ledgers</td><td>scripted run advances S2→S5; refuses failed gates and unsigned holdout</td></tr>
+        <tr><td class="c1">M4</td><td><strong>Purged+embargoed splitter, DSR, full S5</strong> + review notebook</td><td>prior best result re-judged under the new splitter; delta documented</td></tr>
+        <tr><td class="c1">M5</td><td><strong>LLM stages S0/S1/S3/S4</strong> + HG1 flow</td><td>toy prompt → signed pre-reg → strategy passing S4 checks</td></tr>
+        <tr><td class="c1">M6</td><td><strong>Full-pipeline rehearsal</strong> on a deliberately mediocre idea</td><td>a correct, cheap, legible kill</td></tr>
+        <tr><td class="c1">M7</td><td><strong>Deploy + observer</strong> on a VM (dry-run)</td><td>daily parity report generating</td></tr>
+        <tr><td class="c1">M8</td><td><strong>Observation notebooks, 30-day review flow</strong>, calendar-holdout accrual</td><td>first 30-day review through the factory</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/DESIGN.md §6</span><span>roadmap — all nine done; see PLAN.md §0</span></div>
+</section>
+
+<!-- ================= SLIDE 11 — CLOSE ================= -->
+<section class="slide" aria-label="Closing">
+  <div class="slide-inner" style="display:flex; flex-direction:column; justify-content:center;">
+    <div class="eyebrow reveal">The design, distilled</div>
+    <p class="lede reveal" style="font-family:var(--font-display); font-size:52px; line-height:1.35; max-width:1500px;">
+      Sequencing, retries and gate arithmetic are <em style="color:var(--amber);">plain code</em>.
+      Judgment lives inside stages. And the only numbers the factory trusts are the ones
+      <em style="color:var(--amber);">it wrote to its own ledger.</em>
+    </p>
+    <div class="chip-row reveal" style="margin-top:64px;">
+      <span class="chip hot">next: plan.html — the decision record</span>
+      <span class="chip">back: readme.html</span>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/DESIGN.md</span><span>end · → plan.html</span></div>
+</section>
+
+</main>
+</div>
+
+<!-- deck chrome -->
+<div class="progress" id="progressBar"></div>
+<div class="deck-controls"><span class="counter" id="counter">1 / 11</span></div>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E) — Ctrl+S saves a copy">✎ edit</button>
+
+<script>
+/* === SLIDE PRESENTATION CONTROLLER — keyboard / wheel / touch, uniform stage scaling === */
+class SlidePresentation {
+    constructor() {
+        this.slides = document.querySelectorAll('.slide');
+        this.current = 0;
+        this.stage = document.getElementById('deckStage');
+        this.bar = document.getElementById('progressBar');
+        this.counter = document.getElementById('counter');
+        this.setupStageScale();
+        this.setupKeyboard();
+        this.setupWheel();
+        this.setupTouch();
+        /* deep-linking: #3 opens slide 3 */
+        const fromHash = () => this.show((parseInt(location.hash.slice(1), 10) || 1) - 1);
+        window.addEventListener('hashchange', fromHash);
+        fromHash();
+    }
+    setupStageScale() {
+        const scale = () => {
+            const f = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+            const x = (window.innerWidth - 1920 * f) / 2;
+            const y = (window.innerHeight - 1080 * f) / 2;
+            this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+        };
+        scale();
+        window.addEventListener('resize', scale);
+    }
+    setupKeyboard() {
+        document.addEventListener('keydown', (e) => {
+            if (e.target.getAttribute && e.target.getAttribute('contenteditable')) return;
+            if (['ArrowRight',' ','PageDown'].includes(e.key)) { e.preventDefault(); this.show(this.current + 1); }
+            else if (['ArrowLeft','PageUp'].includes(e.key)) { e.preventDefault(); this.show(this.current - 1); }
+            else if (e.key === 'Home') this.show(0);
+            else if (e.key === 'End') this.show(this.slides.length - 1);
+        });
+    }
+    setupWheel() {
+        let lock = false;
+        window.addEventListener('wheel', (e) => {
+            if (lock || document.body.classList.contains('editing')) return;
+            if (Math.abs(e.deltaY) < 24) return;
+            lock = true;
+            this.show(this.current + (e.deltaY > 0 ? 1 : -1));
+            setTimeout(() => lock = false, 650);
+        }, { passive: true });
+    }
+    setupTouch() {
+        let x0 = null;
+        window.addEventListener('touchstart', e => x0 = e.touches[0].clientX, { passive: true });
+        window.addEventListener('touchend', e => {
+            if (x0 === null) return;
+            const dx = e.changedTouches[0].clientX - x0;
+            if (Math.abs(dx) > 50) this.show(this.current + (dx < 0 ? 1 : -1));
+            x0 = null;
+        }, { passive: true });
+    }
+    show(i) {
+        this.current = Math.max(0, Math.min(i, this.slides.length - 1));
+        this.slides.forEach((s, k) => {
+            s.classList.toggle('active', k === this.current);
+            s.classList.toggle('visible', k === this.current);
+        });
+        this.bar.style.width = ((this.current + 1) / this.slides.length * 100) + '%';
+        this.counter.textContent = (this.current + 1) + ' / ' + this.slides.length;
+        history.replaceState(null, '', '#' + (this.current + 1));
+    }
+}
+
+/* === INLINE EDITOR — hover top-left or press E; Ctrl+S downloads edited copy === */
+class InlineEditor {
+    constructor(deckId) {
+        this.key = 'fs-edits-' + deckId;
+        this.isActive = false;
+        this.sel = '.deck-stage h1, .deck-stage h2, .deck-stage h3, .deck-stage p, .deck-stage .k, .deck-stage .eyebrow, .deck-stage .chip, .deck-stage .code, .deck-stage .name, .deck-stage .stamp, .deck-stage td, .deck-stage th, .deck-stage .tree, .deck-stage .slide-foot span';
+        this.restore();
+        this.wire();
+    }
+    nodes() { return document.querySelectorAll(this.sel); }
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('editing', this.isActive);
+        document.getElementById('editToggle').classList.toggle('active', this.isActive);
+        this.nodes().forEach(n => this.isActive
+            ? n.setAttribute('contenteditable', 'true')
+            : n.removeAttribute('contenteditable'));
+        if (!this.isActive) this.persist();
+    }
+    persist() {
+        const data = {};
+        this.nodes().forEach((n, i) => data[i] = n.innerHTML);
+        try { localStorage.setItem(this.key, JSON.stringify(data)); } catch (e) {}
+    }
+    restore() {
+        try {
+            const data = JSON.parse(localStorage.getItem(this.key) || 'null');
+            if (data) this.nodes().forEach((n, i) => { if (data[i] !== undefined) n.innerHTML = data[i]; });
+        } catch (e) {}
+    }
+    saveFile() {
+        this.persist();
+        const clone = document.documentElement.cloneNode(true);
+        clone.querySelectorAll('[contenteditable]').forEach(n => n.removeAttribute('contenteditable'));
+        const blob = new Blob(['<!DOCTYPE html>\n' + clone.outerHTML], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = document.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '-edited.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+    wire() {
+        const toggle = document.getElementById('editToggle');
+        const hotzone = document.getElementById('editHotzone');
+        let hideT = null;
+        toggle.addEventListener('click', () => this.toggleEditMode());
+        hotzone.addEventListener('click', () => this.toggleEditMode());
+        hotzone.addEventListener('mouseenter', () => { clearTimeout(hideT); toggle.classList.add('show'); });
+        hotzone.addEventListener('mouseleave', () => { hideT = setTimeout(() => { if (!this.isActive) toggle.classList.remove('show'); }, 400); });
+        toggle.addEventListener('mouseenter', () => clearTimeout(hideT));
+        toggle.addEventListener('mouseleave', () => { hideT = setTimeout(() => { if (!this.isActive) toggle.classList.remove('show'); }, 400); });
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'e' || e.key === 'E') && !(e.target.getAttribute && e.target.getAttribute('contenteditable'))) this.toggleEditMode();
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); this.saveFile(); }
+            if (e.key === 'Escape' && this.isActive) this.toggleEditMode();
+        });
+        document.addEventListener('input', (e) => { if (this.isActive) this.persist(); });
+    }
+}
+
+new SlidePresentation();
+new InlineEditor('sf-design');
+</script>
+</body>
+</html>

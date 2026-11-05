@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>strategy-factory — README explainer</title>
+
+<!-- === FONTS: Zodiak (display serif) + Supreme (body) via Fontshare, Spline Sans Mono via Google === -->
+<link rel="preconnect" href="https://api.fontshare.com">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=zodiak@400,500,700&f[]=supreme@400,500,700&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+
+<style>
+/* ===========================================
+   THEME — "research ledger" system
+   Shared across the three strategy-factory decks.
+   Change the whole look here.
+   =========================================== */
+:root {
+    --stage-bg: #060807;
+    --slide-bg: #0c100e;
+    --panel:    #131814;
+    --panel-2:  #181e1a;
+    --cream:    #ede8da;
+    --muted:    #99a193;
+    --amber:    #e2a23c;
+    --amber-dim:rgba(226,162,60,.14);
+    --red:      #d85c43;
+    --green:    #87b87b;
+    --line:     rgba(237,232,218,.13);
+
+    --font-display: 'Zodiak', Georgia, serif;
+    --font-body: 'Supreme', sans-serif;
+    --font-mono: 'Spline Sans Mono', monospace;
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-normal: 0.7s;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   (viewport-base.css, included in full)
+   =========================================== */
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+.deck-viewport {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+.deck-stage {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    transform-origin: 0 0;
+    background: var(--slide-bg, #fff);
+}
+.slide {
+    position: absolute;
+    inset: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    background: var(--slide-bg, #fff);
+}
+.slide.active,
+.slide.visible {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 1;
+}
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+.deck-controls {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    z-index: 1000;
+}
+@media print {
+    html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+    .deck-viewport { position: static; overflow: visible; background: #fff; }
+    .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+    .slide {
+        position: relative;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        width: 1920px; height: 1080px;
+        break-after: page; page-break-after: always;
+    }
+    .slide:last-child { break-after: auto; page-break-after: auto; }
+    .deck-controls { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
+    }
+}
+
+/* ===========================================
+   LEDGER-PAGE ATMOSPHERE
+   Every slide carries a faint baseline grid and
+   a red ledger margin-rule at the left.
+   =========================================== */
+.slide {
+    color: var(--cream);
+    font-family: var(--font-body);
+    background:
+        linear-gradient(rgba(237,232,218,.025) 1px, transparent 1px) 0 0 / 100% 54px,
+        radial-gradient(ellipse at 75% -10%, rgba(226,162,60,.07) 0%, transparent 55%),
+        var(--slide-bg);
+}
+.slide::before {               /* ledger margin rule */
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; left: 120px;
+    width: 2px;
+    background: rgba(216,92,67,.30);
+}
+.slide::after {                /* hairline frame */
+    content: '';
+    position: absolute;
+    inset: 26px;
+    border: 1px solid var(--line);
+    pointer-events: none;
+}
+
+/* ===========================================
+   SLIDE SCAFFOLD
+   =========================================== */
+.slide-inner { position: absolute; inset: 0; padding: 86px 110px 110px 170px; }
+.eyebrow {
+    font-family: var(--font-mono);
+    font-size: 21px;
+    letter-spacing: .32em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 22px;
+}
+h1 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 150px;
+    line-height: 1.0;
+    letter-spacing: -0.015em;
+}
+h2 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 66px;
+    line-height: 1.05;
+    margin-bottom: 44px;
+}
+h2 em { font-style: italic; color: var(--amber); }
+p.lede { font-size: 31px; line-height: 1.5; color: var(--cream); max-width: 1280px; }
+p.lede strong { color: var(--amber); font-weight: 600; }
+
+/* Per-slide footer: file identity + page locator */
+.slide-foot {
+    position: absolute;
+    left: 170px; right: 110px; bottom: 48px;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 18px;
+    color: var(--muted);
+    letter-spacing: .08em;
+}
+.slide-foot .doc { color: var(--amber); }
+
+/* ===========================================
+   COMPONENTS
+   =========================================== */
+/* mono chips */
+.chip-row { display: flex; gap: 18px; flex-wrap: wrap; }
+.chip {
+    font-family: var(--font-mono);
+    font-size: 21px;
+    padding: 12px 24px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--muted);
+    background: var(--panel);
+}
+.chip.hot { color: var(--amber); border-color: rgba(226,162,60,.45); background: var(--amber-dim); }
+
+/* pipeline rail */
+.pipe { display: flex; align-items: stretch; gap: 0; }
+.pipe .st {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 10px 16px;
+    text-align: center;
+    position: relative;
+}
+.pipe .st + .st { margin-left: 34px; }
+.pipe .st + .st::before {
+    content: '►';
+    position: absolute;
+    left: -27px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 15px;
+}
+.pipe .st .code { font-family: var(--font-mono); font-size: 19px; color: var(--amber); letter-spacing: .12em; }
+.pipe .st .name { font-family: var(--font-display); font-size: 29px; margin-top: 6px; }
+.pipe .st.gated { border-color: rgba(226,162,60,.55); background: linear-gradient(180deg, var(--amber-dim), var(--panel)); }
+.pipe .st.killer { border-color: rgba(216,92,67,.55); }
+.pipe .st .tag {
+    position: absolute;
+    top: -17px; left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 16px;
+    letter-spacing: .12em;
+    padding: 3px 12px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.pipe .st.gated .tag { background: var(--amber); color: #171204; }
+.pipe .st.killer .tag { background: var(--red); color: #1a0803; }
+
+/* card grid */
+.cards { display: grid; gap: 28px; }
+.card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 34px 38px;
+    position: relative;
+}
+.card .k {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 14px;
+}
+.card h3 { font-family: var(--font-display); font-size: 37px; font-weight: 500; margin-bottom: 14px; }
+.card p { font-size: 24px; line-height: 1.5; color: var(--muted); }
+.card p strong { color: var(--cream); font-weight: 600; }
+.card .num {
+    position: absolute;
+    top: 26px; right: 34px;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 54px;
+    color: rgba(237,232,218,.13);
+}
+
+/* rubber stamp */
+.stamp {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    letter-spacing: .3em;
+    text-transform: uppercase;
+    border: 3px solid currentColor;
+    border-radius: 8px;
+    padding: 10px 26px 10px 32px;
+    transform: rotate(-4deg);
+    opacity: .92;
+    white-space: nowrap;
+}
+.stamp.kill { color: var(--red); }
+.stamp.pass { color: var(--green); }
+.stamp.sign { color: var(--amber); }
+
+/* banner strip */
+.banner {
+    border: 1px solid rgba(216,92,67,.4);
+    background: linear-gradient(90deg, rgba(216,92,67,.10), transparent 70%);
+    border-radius: 14px;
+    padding: 30px 40px;
+    display: flex;
+    align-items: center;
+    gap: 44px;
+}
+.banner p { font-family: var(--font-display); font-size: 33px; line-height: 1.35; }
+.banner p strong { color: var(--red); font-weight: 600; }
+
+/* generic reveal animation, staggered */
+.reveal {
+    opacity: 0;
+    transform: translateY(26px);
+    transition: opacity var(--duration-normal) var(--ease-out-expo),
+                transform var(--duration-normal) var(--ease-out-expo);
+}
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.reveal:nth-child(1) { transition-delay: .05s; }
+.reveal:nth-child(2) { transition-delay: .15s; }
+.reveal:nth-child(3) { transition-delay: .25s; }
+.reveal:nth-child(4) { transition-delay: .35s; }
+.reveal:nth-child(5) { transition-delay: .45s; }
+.reveal:nth-child(6) { transition-delay: .55s; }
+
+/* ===========================================
+   DECK CHROME (outside the stage design system)
+   =========================================== */
+.progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: var(--amber);
+    z-index: 1001;
+    transition: width .35s var(--ease-out-expo);
+}
+.counter {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: .15em;
+    color: var(--muted);
+    background: rgba(12,16,14,.7);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 18px;
+}
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle {
+    position: fixed; top: 16px; left: 16px;
+    z-index: 10001;
+    font-size: 18px;
+    background: var(--panel-2);
+    color: var(--cream);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s ease;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+.edit-toggle.active { border-color: var(--amber); color: var(--amber); }
+body.editing [contenteditable="true"]:hover { outline: 1px dashed rgba(226,162,60,.6); }
+body.editing [contenteditable="true"]:focus { outline: 2px solid var(--amber); }
+</style>
+</head>
+<body>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage" aria-label="strategy-factory README explainer">
+
+<!-- ================= SLIDE 1 — TITLE ================= -->
+<section class="slide active" aria-label="Title">
+  <div class="slide-inner" style="display:flex; flex-direction:column; justify-content:center;">
+    <div class="eyebrow reveal">TechTrading · Projects · README.md</div>
+    <h1 class="reveal">strategy-<em style="font-style:italic; color:var(--amber);">factory</em></h1>
+    <p class="lede reveal" style="margin-top:44px;">
+      An agent pipeline that <strong>researches, implements, tests, validates, deploys and
+      observes</strong> crypto trading strategies for freqtrade — with a human signature gate
+      between the stages that matter.
+    </p>
+    <div class="chip-row reveal" style="margin-top:56px;">
+      <span class="chip hot">engine: freqtrade</span>
+      <span class="chip">3 human gates</span>
+      <span class="chip">deploy = dry-run only</span>
+      <span class="chip">every run on the trial ledger</span>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">README.md</span><span>strategy-factory · explainer 1 of 3</span></div>
+</section>
+
+<!-- ================= SLIDE 2 — PIPELINE ================= -->
+<section class="slide" aria-label="Pipeline">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">One prompt in, one verdict out</div>
+    <h2 class="reveal">Eight stages, <em>three signatures</em></h2>
+    <div class="pipe reveal" style="margin-top:50px;">
+      <div class="st"><div class="code">S0–S1</div><div class="name">Intake · Research</div></div>
+      <div class="st killer"><div class="tag">AUTO-KILL</div><div class="code">S2</div><div class="name">Screen</div></div>
+      <div class="st gated"><div class="tag">HG1 — user signs</div><div class="code">S3</div><div class="name">Pre-register</div></div>
+      <div class="st"><div class="code">S4</div><div class="name">Implement</div></div>
+      <div class="st gated"><div class="tag">HG2 / HG2b</div><div class="code">S5</div><div class="name">Validate</div></div>
+      <div class="st gated"><div class="tag">HG3 — approve</div><div class="code">S6</div><div class="name">Deploy</div></div>
+      <div class="st"><div class="code">S7</div><div class="name">Observe</div></div>
+    </div>
+    <div class="cards reveal" style="grid-template-columns: repeat(3, 1fr); margin-top:64px;">
+      <div class="card">
+        <div class="k">S2 → graveyard</div>
+        <p><strong>Most hypotheses should die here.</strong> Cheap deterministic kills before
+        any money, folds, or signatures are spent — a dead idea costs minutes.</p>
+      </div>
+      <div class="card">
+        <div class="k">HG1 · HG2 · HG3</div>
+        <p>The user <strong>signs the pre-registration</strong>, <strong>judges the validation
+        dossier</strong> (HG2b separately unlocks holdout data), and <strong>approves the
+        deploy</strong>. Nothing advances on vibes.</p>
+      </div>
+      <div class="card">
+        <div class="k">Deploy ≠ live</div>
+        <p>S6 means <strong>dry_run: true</strong> on a cloud VM with an observer watching.
+        Going live is outside this repo's scope entirely.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">README.md</span><span>the pipeline</span></div>
+</section>
+
+<!-- ================= SLIDE 3 — WHAT THIS IS ================= -->
+<section class="slide" aria-label="What this is">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">What this is, in one paragraph</div>
+    <h2 class="reveal">A manual method, <em>mechanized</em></h2>
+    <div class="reveal" style="display:grid; grid-template-columns: 1.1fr 1fr; gap:60px; margin-top:10px;">
+      <div>
+        <p style="font-size:28px; line-height:1.6; color:var(--cream);">
+          Over four days in September 2026, a manual research process put
+          <strong style="color:var(--amber);">six strategy hypotheses</strong> through a gauntlet of
+          measured gates — and <strong style="color:var(--red);">killed all six</strong>, each for a
+          diagnosed reason.
+        </p>
+        <p style="font-size:28px; line-height:1.6; color:var(--muted); margin-top:28px;">
+          The factory is that method as machinery: the gates become stage validators,
+          pre-registration becomes a blocking human gate, holdout data becomes physically
+          unmountable without a signed spend approval, and every run appends to a trial
+          ledger — so the deflated Sharpe is <em style="color:var(--cream);">computable</em>
+          instead of aspirational.
+        </p>
+      </div>
+      <div class="card" style="padding:30px 36px;">
+        <div class="k">The manual gauntlet, now in code</div>
+        <p style="font-family:var(--font-mono); font-size:22px; line-height:2.05; color:var(--cream);">
+          · cost coverage<br>
+          · noise floor<br>
+          · factor screens<br>
+          · control arms<br>
+          · exposure-scaled passive benchmarks<br>
+          · return concentration
+        </p>
+      </div>
+    </div>
+    <div class="banner reveal" style="margin-top:46px;">
+      <span class="stamp kill">re-killed ×6</span>
+      <p>The six corpses are the regression suite: <strong>the factory must re-kill every one
+      of them, at the right stage, for the right reason.</strong></p>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">README.md</span><span>what this is</span></div>
+</section>
+
+<!-- ================= SLIDE 4 — HARD RULES ================= -->
+<section class="slide" aria-label="Hard rules">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">Non-negotiables</div>
+    <h2 class="reveal">Four <em>hard rules</em></h2>
+    <div class="cards" style="grid-template-columns: 1fr 1fr; margin-top:20px;">
+      <div class="card reveal">
+        <div class="num">01</div>
+        <h3>No live trading</h3>
+        <p>Deploy means <strong>dry_run: true</strong>. Going live is outside this repo's
+        scope — a separate decision with its own gate, elsewhere.</p>
+      </div>
+      <div class="card reveal">
+        <div class="num">02</div>
+        <h3>No secrets in the tree, ever</h3>
+        <p>Env vars only (<strong>FREQTRADE__EXCHANGE__KEY/__SECRET</strong>). A 2020
+        predecessor committed live keys once; this repo never gets the chance.</p>
+      </div>
+      <div class="card reveal">
+        <div class="num">03</div>
+        <h3>Holdout data is spent by looking at it</h3>
+        <p>The store partitions it physically; only a <strong>signed HG2b approval</strong>
+        mounts it, and the spend is recorded permanently.</p>
+      </div>
+      <div class="card reveal">
+        <div class="num">04</div>
+        <h3>Every run appends to the trial ledger</h3>
+        <p>Backtests, screens, re-runs — all of it. <strong>The count only goes up</strong>,
+        which is what keeps the deflated Sharpe honest.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">README.md</span><span>hard rules</span></div>
+</section>
+
+<!-- ================= SLIDE 5 — PROVENANCE ================= -->
+<section class="slide" aria-label="Provenance">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">Where the pieces came from</div>
+    <h2 class="reveal">Provenance</h2>
+    <div class="cards" style="grid-template-columns: repeat(3, 1fr); margin-top:20px;">
+      <div class="card reveal">
+        <div class="k">lab/ — the engine room</div>
+        <h3>freqtrade 2026.8 workspace</h3>
+        <p>Formerly the standalone <strong>freqtrade-lab</strong>, absorbed 2026-09-29. Brings a
+        7-fold walk-forward harness, screens, a tear sheet — and a README of ten hard-won
+        gotchas.</p>
+      </div>
+      <div class="card reveal">
+        <div class="k">docs/PLAN.md — the decision record</div>
+        <h3>The steering document</h3>
+        <p>Status, decisions, M0–M8 execution findings, next steps (§17). Its
+        <strong>Autotrader Plan §n</strong> references point to the private trading-practice
+        record, which stays out of this repo.</p>
+      </div>
+      <div class="card reveal">
+        <div class="k">Design lineage</div>
+        <h3>Build pipelines, one refusal</h3>
+        <p>Role-scoped workers, manifests, per-stage validators, resume/replay — with the
+        LLM meta-agent orchestrator <strong>deliberately replaced by a deterministic state
+        machine</strong>. LLM judgment lives <em>inside</em> stages, never between them.</p>
+      </div>
+    </div>
+    <div class="banner reveal" style="margin-top:44px; border-color:rgba(226,162,60,.4); background:linear-gradient(90deg, var(--amber-dim), transparent 70%);">
+      <span class="stamp sign">MIT</span>
+      <p>License: MIT. freqtrade (GPL-3.0) is driven <strong style="color:var(--amber);">strictly across
+      a process boundary</strong> (docker CLI) — no freqtrade code is copied here.</p>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">README.md</span><span>provenance · license</span></div>
+</section>
+
+<!-- ================= SLIDE 6 — STATUS & READING ORDER ================= -->
+<section class="slide" aria-label="Status and reading order">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">Where things stand</div>
+    <h2 class="reveal">Status, and <em>what to read next</em></h2>
+    <div class="reveal" style="display:grid; grid-template-columns: 1fr 1fr; gap:34px; margin-top:16px;">
+      <div class="card">
+        <div class="k">The README's own claim</div>
+        <h3>"Status: M0 — scaffold"</h3>
+        <p>The README still carries its day-one status line. <strong>PLAN.md §0 is the live
+        record:</strong> M0–M8 completed 2026-09-29/30, repo public, a dry-run bot live on a
+        GCP VM. Trust the plan, not the headline.</p>
+      </div>
+      <div class="card">
+        <div class="k">Reading order for review</div>
+        <p style="font-size:25px; line-height:1.9; color:var(--cream);">
+          <strong style="color:var(--amber); font-family:var(--font-mono); font-size:21px;">1 ·</strong> this deck — the shape of the thing<br>
+          <strong style="color:var(--amber); font-family:var(--font-mono); font-size:21px;">2 ·</strong> <strong>DESIGN.md</strong> — the buildable spec (deck 2)<br>
+          <strong style="color:var(--amber); font-family:var(--font-mono); font-size:21px;">3 ·</strong> <strong>PLAN.md</strong> — decisions &amp; findings (deck 3)
+        </p>
+      </div>
+    </div>
+    <p class="lede reveal" style="margin-top:56px; font-family:var(--font-display); font-size:40px; line-height:1.4;">
+      A faster gauntlet does not refill the idea well —<br>
+      <em style="color:var(--amber);">it makes every bad idea cheap to bury.</em>
+    </p>
+  </div>
+  <div class="slide-foot"><span class="doc">README.md</span><span>end · → design.html</span></div>
+</section>
+
+</main>
+</div>
+
+<!-- deck chrome: progress bar, counter, edit affordance -->
+<div class="progress" id="progressBar"></div>
+<div class="deck-controls"><span class="counter" id="counter">1 / 6</span></div>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E) — Ctrl+S saves a copy">✎ edit</button>
+
+<script>
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   Keyboard: ← → Space PgUp PgDn Home End
+   Wheel + touch swipe. Stage scales as a whole.
+   =========================================== */
+class SlidePresentation {
+    constructor() {
+        this.slides = document.querySelectorAll('.slide');
+        this.current = 0;
+        this.stage = document.getElementById('deckStage');
+        this.bar = document.getElementById('progressBar');
+        this.counter = document.getElementById('counter');
+        this.setupStageScale();
+        this.setupKeyboard();
+        this.setupWheel();
+        this.setupTouch();
+        /* deep-linking: #3 opens slide 3 */
+        const fromHash = () => this.show((parseInt(location.hash.slice(1), 10) || 1) - 1);
+        window.addEventListener('hashchange', fromHash);
+        fromHash();
+    }
+    /* uniform scale of the 1920x1080 stage; letterbox, never reflow */
+    setupStageScale() {
+        const scale = () => {
+            const f = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+            const x = (window.innerWidth - 1920 * f) / 2;
+            const y = (window.innerHeight - 1080 * f) / 2;
+            this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+        };
+        scale();
+        window.addEventListener('resize', scale);
+    }
+    setupKeyboard() {
+        document.addEventListener('keydown', (e) => {
+            if (e.target.getAttribute && e.target.getAttribute('contenteditable')) return;
+            if (['ArrowRight',' ','PageDown'].includes(e.key)) { e.preventDefault(); this.show(this.current + 1); }
+            else if (['ArrowLeft','PageUp'].includes(e.key)) { e.preventDefault(); this.show(this.current - 1); }
+            else if (e.key === 'Home') this.show(0);
+            else if (e.key === 'End') this.show(this.slides.length - 1);
+        });
+    }
+    setupWheel() {
+        let lock = false;
+        window.addEventListener('wheel', (e) => {
+            if (lock || document.body.classList.contains('editing')) return;
+            if (Math.abs(e.deltaY) < 24) return;
+            lock = true;
+            this.show(this.current + (e.deltaY > 0 ? 1 : -1));
+            setTimeout(() => lock = false, 650);
+        }, { passive: true });
+    }
+    setupTouch() {
+        let x0 = null;
+        window.addEventListener('touchstart', e => x0 = e.touches[0].clientX, { passive: true });
+        window.addEventListener('touchend', e => {
+            if (x0 === null) return;
+            const dx = e.changedTouches[0].clientX - x0;
+            if (Math.abs(dx) > 50) this.show(this.current + (dx < 0 ? 1 : -1));
+            x0 = null;
+        }, { passive: true });
+    }
+    show(i) {
+        this.current = Math.max(0, Math.min(i, this.slides.length - 1));
+        this.slides.forEach((s, k) => {
+            s.classList.toggle('active', k === this.current);
+            s.classList.toggle('visible', k === this.current);
+        });
+        this.bar.style.width = ((this.current + 1) / this.slides.length * 100) + '%';
+        this.counter.textContent = (this.current + 1) + ' / ' + this.slides.length;
+        history.replaceState(null, '', '#' + (this.current + 1));
+    }
+}
+
+/* ===========================================
+   INLINE EDITOR — hover top-left or press E.
+   Edits autosave to localStorage; Ctrl+S downloads
+   the edited HTML as a new file.
+   =========================================== */
+class InlineEditor {
+    constructor(deckId) {
+        this.key = 'fs-edits-' + deckId;
+        this.isActive = false;
+        this.sel = '.deck-stage h1, .deck-stage h2, .deck-stage h3, .deck-stage p, .deck-stage .k, .deck-stage .eyebrow, .deck-stage .chip, .deck-stage .code, .deck-stage .name, .deck-stage .stamp, .deck-stage .slide-foot span';
+        this.restore();
+        this.wire();
+    }
+    nodes() { return document.querySelectorAll(this.sel); }
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('editing', this.isActive);
+        document.getElementById('editToggle').classList.toggle('active', this.isActive);
+        this.nodes().forEach(n => this.isActive
+            ? n.setAttribute('contenteditable', 'true')
+            : n.removeAttribute('contenteditable'));
+        if (!this.isActive) this.persist();
+    }
+    persist() {
+        const data = {};
+        this.nodes().forEach((n, i) => data[i] = n.innerHTML);
+        try { localStorage.setItem(this.key, JSON.stringify(data)); } catch (e) {}
+    }
+    restore() {
+        try {
+            const data = JSON.parse(localStorage.getItem(this.key) || 'null');
+            if (data) this.nodes().forEach((n, i) => { if (data[i] !== undefined) n.innerHTML = data[i]; });
+        } catch (e) {}
+    }
+    saveFile() {
+        this.persist();
+        const clone = document.documentElement.cloneNode(true);
+        clone.querySelectorAll('[contenteditable]').forEach(n => n.removeAttribute('contenteditable'));
+        const blob = new Blob(['<!DOCTYPE html>\n' + clone.outerHTML], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = document.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '-edited.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+    wire() {
+        const toggle = document.getElementById('editToggle');
+        const hotzone = document.getElementById('editHotzone');
+        let hideT = null;
+        toggle.addEventListener('click', () => this.toggleEditMode());
+        hotzone.addEventListener('click', () => this.toggleEditMode());
+        hotzone.addEventListener('mouseenter', () => { clearTimeout(hideT); toggle.classList.add('show'); });
+        hotzone.addEventListener('mouseleave', () => { hideT = setTimeout(() => { if (!this.isActive) toggle.classList.remove('show'); }, 400); });
+        toggle.addEventListener('mouseenter', () => clearTimeout(hideT));
+        toggle.addEventListener('mouseleave', () => { hideT = setTimeout(() => { if (!this.isActive) toggle.classList.remove('show'); }, 400); });
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'e' || e.key === 'E') && !(e.target.getAttribute && e.target.getAttribute('contenteditable'))) this.toggleEditMode();
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); this.saveFile(); }
+            if (e.key === 'Escape' && this.isActive) this.toggleEditMode();
+        });
+        document.addEventListener('input', (e) => { if (this.isActive) this.persist(); });
+    }
+}
+
+new SlidePresentation();
+new InlineEditor('sf-readme');
+</script>
+</body>
+</html>
