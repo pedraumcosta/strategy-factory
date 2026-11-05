@@ -1,0 +1,50 @@
+{
+ "run_id": "20261105-151453-third-entry-of-lowvolranktilt17",
+ "prompt": "THIRD ENTRY of LowVolRankTilt17, re-issued: the previous issue of this same entry (20261105-150917) died on an infrastructure defect, not a verdict \u2014 S0 wrote pairs into the universe that the data store does not hold, so the measured screen could not run. THE UNIVERSE IS EXACTLY THESE 17 PAIRS, VERBATIM, NO ADDITIONS OR SUBSTITUTIONS: BTC/USDT, ETH/USDT, BNB/USDT, XRP/USDT, ADA/USDT, SOL/USDT, DOGE/USDT, LTC/USDT, LINK/USDT, XLM/USDT, TRX/USDT, AVAX/USDT, ALGO/USDT, UNI/USDT, NEAR/USDT, HBAR/USDT, ZEC/USDT. Family history (all on the record, the eventual DSR is deflated against it): first entry 20261105-143623 killed by the noise floor on internally inconsistent 21d accounting; second entry 20261105-145445 killed by cost coverage because the pre-\u00a717.10 gate charged every 7d rebalance a full round trip; the \u00a717.10 turnover-aware gate then landed. Factor, construction and rationale UNCHANGED: cross-sectional low-volatility, factor (causal DSL) -ts_std(ts_ret(close, 1), 60), linear rank-weighted long-only allocation across the whole cross-section (quietest coin largest weight), max_pair_weight 0.15, spot only, no shorting, rebalance every 7 days, disaster stop only (~-30%), signals on prior completed bars. Screen evidence (registered \u00a717.8 battery, 2026-11-05): 21d rank IC positive in all 7 IS folds (pooled +0.131, t 5.0); 5d-horizon pooled IC +0.087 (t 3.3); binding caveat: quintile spread negative in 5 of 7 folds, so monetize ranks, never buckets. Estimates at the trade unit of one pair's 7-day rebalance-to-rebalance hold: edge ~0.25% derived from the 5d IC via the fundamental-law sketch with the mean-monetization haircut; sd ~7%; ~4,200 holds after listing and warm-up haircuts. REQUIRED: estimates.turnover_per_trade, DERIVED, not asserted \u2014 from the 60d vol score's weekly rate of rank change across 17 names and the linear-rank weight map, estimate the fraction of a position's value a weekly reweight actually transacts (the screen measured ~3%/day for daily-updated top-quintile membership; weekly linear-rank reweighting of a slow score plausibly lands near 0.05-0.15 \u2014 derive your own number and show the arithmetic in estimates_basis). Do not pick the turnover to clear the gate: derive it and let the gate judge.",
+ "created_at": "2026-11-05T15:14:53-0300",
+ "stages": {
+  "S0": {
+   "status": "passed",
+   "started_at": "2026-11-05T15:14:59-0300",
+   "report": "card for LowVolRankTilt17",
+   "data": {
+    "name": "LowVolRankTilt17"
+   },
+   "finished_at": "2026-11-05T15:17:11-0300"
+  },
+  "S1": {
+   "status": "passed",
+   "started_at": "2026-11-05T15:17:11-0300",
+   "report": "research memo written",
+   "data": {},
+   "finished_at": "2026-11-05T15:21:30-0300"
+  },
+  "S2": {
+   "status": "passed",
+   "started_at": "2026-11-05T15:21:30-0300",
+   "report": "estimate screens clear; measured factor screen passed",
+   "data": {},
+   "finished_at": "2026-11-05T15:21:37-0300"
+  },
+  "S3": {
+   "status": "needs_human",
+   "started_at": "2026-11-05T15:21:37-0300",
+   "report": "pre-registration drafted \u2014 review artifacts/prereg.md and sign: factory approve 20261105-151453-third-entry-of-lowvolranktilt17 hg1",
+   "data": {},
+   "finished_at": "2026-11-05T15:23:18-0300",
+   "completed": true
+  },
+  "S4": {
+   "status": "pending"
+  },
+  "S5": {
+   "status": "pending"
+  },
+  "S6": {
+   "status": "pending"
+  },
+  "S7": {
+   "status": "pending"
+  }
+ }
+}

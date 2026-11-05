@@ -1,0 +1,45 @@
+{
+ "run_id": "20261105-145445-re-entry-of-lowvolranktilt17",
+ "prompt": "RE-ENTRY of LowVolRankTilt17 (first entry 20261105-143623 was killed at S2 by the noise floor on an internally inconsistent card: it declared a trade to be one rebalance-to-rebalance hold and set rebalance_interval_days 7, yet computed trades_available and per-trade edge/sd on 21-day holds. This re-entry fixes ONLY that accounting; the factor, universe, construction and rationale are unchanged, and the prior kill stays on the record). Cross-sectional low-volatility factor on the 17-pair USDT 1d universe. Factor (causal DSL): -ts_std(ts_ret(close, 1), 60) \u2014 rank coins by trailing 60d daily-return volatility, prefer the quiet ones. Construction: linear rank-weighted long-only allocation across the whole cross-section (quietest coin largest weight), max_pair_weight 0.15, spot only, no shorting, rebalance every 7 days, disaster stop only (~-30%), signals on prior completed bars. Screen evidence (registered \u00a717.8 battery, run 2026-11-05): 21d rank IC positive in all 7 IS folds (pooled +0.131, t 5.0); at the 5d horizon matching a 7d rebalance, pooled IC +0.087 (t 3.3); binding caveat: 21d top-minus-bottom quintile spread negative in 5 of 7 folds, so the construction must monetize ranks, never quintile buckets. ESTIMATES MUST BE CONSISTENT WITH THE 7-DAY REBALANCE: one trade = one pair's 7-day rebalance-to-rebalance hold, so trades_available ~ 17 pairs x 52 rebalances/year x ~8 years, haircut for mid-sample listings (SOL, AVAX, NEAR, UNI, HBAR) and the 60d warm-up (~4,000-4,500); per-trade edge derived from the 5d-horizon IC via the fundamental-law sketch (IC x 7d cross-sectional dispersion x tilt efficiency, haircut as before \u2014 roughly 0.2-0.3%); per-trade sd at the 7d horizon (~6-8%). Do not inflate the edge to clear the gate: derive it and let the gate judge.",
+ "created_at": "2026-11-05T14:54:45-0300",
+ "stages": {
+  "S0": {
+   "status": "passed",
+   "started_at": "2026-11-05T14:54:51-0300",
+   "report": "card for LowVolRankTilt17",
+   "data": {
+    "name": "LowVolRankTilt17"
+   },
+   "finished_at": "2026-11-05T14:56:26-0300"
+  },
+  "S1": {
+   "status": "passed",
+   "started_at": "2026-11-05T14:56:26-0300",
+   "report": "research memo written",
+   "data": {},
+   "finished_at": "2026-11-05T15:00:25-0300"
+  },
+  "S2": {
+   "status": "killed",
+   "started_at": "2026-11-05T15:00:25-0300",
+   "report": "cost_coverage: coverage 1.25\u00d7 vs required 3.0\u00d7",
+   "data": {},
+   "finished_at": "2026-11-05T15:00:32-0300"
+  },
+  "S3": {
+   "status": "pending"
+  },
+  "S4": {
+   "status": "pending"
+  },
+  "S5": {
+   "status": "pending"
+  },
+  "S6": {
+   "status": "pending"
+  },
+  "S7": {
+   "status": "pending"
+  }
+ }
+}
