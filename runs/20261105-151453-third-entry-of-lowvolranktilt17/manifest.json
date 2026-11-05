@@ -27,18 +27,32 @@
    "finished_at": "2026-11-05T15:21:37-0300"
   },
   "S3": {
-   "status": "needs_human",
+   "status": "passed",
    "started_at": "2026-11-05T15:21:37-0300",
    "report": "pre-registration drafted \u2014 review artifacts/prereg.md and sign: factory approve 20261105-151453-third-entry-of-lowvolranktilt17 hg1",
    "data": {},
    "finished_at": "2026-11-05T15:23:18-0300",
-   "completed": true
+   "completed": true,
+   "acknowledged_by": "hg1",
+   "acknowledged_at": "2026-11-05T15:30:26-0300"
   },
   "S4": {
-   "status": "pending"
+   "status": "passed",
+   "started_at": "2026-11-05T15:36:56-0300",
+   "report": "smoke backtest ran: 244 trades on 20210101-20210901",
+   "data": {
+    "strategy_file": "LowVolRankTilt17.py"
+   },
+   "finished_at": "2026-11-05T15:39:41-0300"
   },
   "S5": {
-   "status": "pending"
+   "status": "killed",
+   "started_at": "2026-11-05T15:39:41-0300",
+   "report": "zero_fee_sanity: total return at zero fees: -33.43%; cost_coverage: coverage -3.03\u00d7 vs required 3.0\u00d7",
+   "data": {
+    "dossier": "artifacts/dossier.json"
+   },
+   "finished_at": "2026-11-05T15:41:10-0300"
   },
   "S6": {
    "status": "pending"

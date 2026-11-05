@@ -105,3 +105,14 @@ def test_cost_coverage_scales_cost_by_turnover():
     assert abs(v.numbers["coverage"] - 12.5) < 1e-9
     # the same card charged a full round trip fails — the §17.8 pincer
     assert not core.cost_coverage(0.0025, 0.002).passed
+
+
+def test_lowvol_ranktilt_dies_at_zero_fee_sanity():
+    """The first real candidate (2026-11-05): a measured, pre-registered
+    full-range run losing money with fees OFF is the hardest kill there is —
+    the rank IC was real and the monetization was not."""
+    f = GRAVEYARD["lowvol_ranktilt"]
+    assert not core.zero_fee_sanity(f["profit_total_at_zero_fee"]).passed
+    v = core.cost_coverage(f["gross_edge_per_trade"], f["roundtrip_cost"])
+    assert not v.passed
+    assert abs(v.numbers["coverage"] - f["cost_coverage_recorded"]) < 0.01
