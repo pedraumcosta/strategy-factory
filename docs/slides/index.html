@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>strategy-factory — explainer decks</title>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=zodiak@400,500,700&f[]=supreme@400,500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spline+Sans+Mono:wght@400;500&display=swap">
+<style>
+/* Hub page, not a slide deck — fluid layout is fine here. */
+:root {
+    --bg: #0c100e; --panel: #131814; --cream: #ede8da; --muted: #99a193;
+    --amber: #e2a23c; --red: #d85c43; --line: rgba(237,232,218,.13);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    min-height: 100vh;
+    background:
+        linear-gradient(rgba(237,232,218,.025) 1px, transparent 1px) 0 0 / 100% 54px,
+        radial-gradient(ellipse at 75% -10%, rgba(226,162,60,.08) 0%, transparent 55%),
+        var(--bg);
+    color: var(--cream);
+    font-family: 'Supreme', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(24px, 5vw, 80px);
+}
+.wrap { max-width: 1240px; width: 100%; }
+.eyebrow {
+    font-family: 'Spline Sans Mono', monospace;
+    font-size: clamp(12px, 1.1vw, 15px);
+    letter-spacing: .32em; text-transform: uppercase;
+    color: var(--amber); margin-bottom: 18px;
+}
+h1 { font-family: 'Zodiak', Georgia, serif; font-weight: 500; font-size: clamp(42px, 6vw, 84px); line-height: 1.02; }
+h1 em { font-style: italic; color: var(--amber); }
+p.sub { color: var(--muted); font-size: clamp(16px, 1.6vw, 21px); line-height: 1.55; margin-top: 20px; max-width: 760px; }
+.decks { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; margin-top: 48px; }
+a.deck {
+    display: block; text-decoration: none; color: var(--cream);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+    padding: 30px 32px; transition: border-color .25s ease, transform .25s ease;
+}
+a.deck:hover { border-color: rgba(226,162,60,.55); transform: translateY(-4px); }
+a.deck .n { font-family: 'Spline Sans Mono', monospace; font-size: 13px; letter-spacing: .22em; text-transform: uppercase; color: var(--amber); }
+a.deck h2 { font-family: 'Zodiak', Georgia, serif; font-weight: 500; font-size: clamp(24px, 2.4vw, 32px); margin: 12px 0 10px; }
+a.deck p { color: var(--muted); font-size: clamp(14px, 1.3vw, 17px); line-height: 1.5; }
+a.deck .f { font-family: 'Spline Sans Mono', monospace; font-size: 13px; color: var(--muted); margin-top: 18px; }
+.hint { font-family: 'Spline Sans Mono', monospace; font-size: 13px; color: var(--muted); letter-spacing: .08em; margin-top: 42px; }
+.hint b { color: var(--amber); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <div class="eyebrow">TechTrading · Projects · review explainers</div>
+    <h1>strategy-<em>factory</em></h1>
+    <p class="sub">Three reading decks for quick review — the shape of the thing, the spec you
+    build from, and the decisions with the measured numbers behind them.</p>
+    <div class="decks">
+        <a class="deck" href="readme.html">
+            <div class="n">Deck 1 · 6 slides</div>
+            <h2>README — the shape</h2>
+            <p>What the factory is in one paragraph, the pipeline and its three signatures,
+            the four hard rules, provenance and license.</p>
+            <div class="f">README.md → readme.html</div>
+        </a>
+        <a class="deck" href="design.html">
+            <div class="n">Deck 2 · 11 slides</div>
+            <h2>DESIGN — the spec</h2>
+            <p>Four principles, the stage contract, all nine gates with their kill fixtures,
+            the repo layout, data partitions and the M0–M8 roadmap.</p>
+            <div class="f">docs/DESIGN.md → design.html</div>
+        </a>
+        <a class="deck" href="plan.html">
+            <div class="n">Deck 3 · 13 slides</div>
+            <h2>PLAN — the record</h2>
+            <p>Pivot-to-live timeline, the verdict, patterns adopted and refused, what M4–M8
+            actually found, honest caveats and the reading queue.</p>
+            <div class="f">docs/PLAN.md → plan.html</div>
+        </a>
+    </div>
+    <p class="hint">Inside a deck: <b>← →</b> or <b>space</b> to navigate · <b>E</b> toggles inline
+    editing · <b>Ctrl+S</b> downloads your edited copy · print for PDF (one slide per page).</p>
+</div>
+</body>
+</html>

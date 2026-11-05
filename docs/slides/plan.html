@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>strategy-factory — PLAN explainer</title>
+
+<!-- === FONTS: Zodiak (display serif) + Supreme (body) via Fontshare, Spline Sans Mono via Google === -->
+<link rel="preconnect" href="https://api.fontshare.com">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=zodiak@400,500,700&f[]=supreme@400,500,700&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spline+Sans+Mono:wght@400;500;600&display=swap">
+
+<style>
+/* ===========================================
+   THEME — "research ledger" system
+   Shared across the three strategy-factory decks.
+   =========================================== */
+:root {
+    --stage-bg: #060807;
+    --slide-bg: #0c100e;
+    --panel:    #131814;
+    --panel-2:  #181e1a;
+    --cream:    #ede8da;
+    --muted:    #99a193;
+    --amber:    #e2a23c;
+    --amber-dim:rgba(226,162,60,.14);
+    --red:      #d85c43;
+    --green:    #87b87b;
+    --line:     rgba(237,232,218,.13);
+
+    --font-display: 'Zodiak', Georgia, serif;
+    --font-body: 'Supreme', sans-serif;
+    --font-mono: 'Spline Sans Mono', monospace;
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-normal: 0.7s;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   (viewport-base.css, included in full)
+   =========================================== */
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+.deck-viewport {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+.deck-stage {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    transform-origin: 0 0;
+    background: var(--slide-bg, #fff);
+}
+.slide {
+    position: absolute;
+    inset: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    background: var(--slide-bg, #fff);
+}
+.slide.active,
+.slide.visible {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 1;
+}
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+.deck-controls {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    z-index: 1000;
+}
+@media print {
+    html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+    .deck-viewport { position: static; overflow: visible; background: #fff; }
+    .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+    .slide {
+        position: relative;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        width: 1920px; height: 1080px;
+        break-after: page; page-break-after: always;
+    }
+    .slide:last-child { break-after: auto; page-break-after: auto; }
+    .deck-controls { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
+    }
+}
+
+/* ===========================================
+   LEDGER-PAGE ATMOSPHERE
+   =========================================== */
+.slide {
+    color: var(--cream);
+    font-family: var(--font-body);
+    background:
+        linear-gradient(rgba(237,232,218,.025) 1px, transparent 1px) 0 0 / 100% 54px,
+        radial-gradient(ellipse at 75% -10%, rgba(226,162,60,.07) 0%, transparent 55%),
+        var(--slide-bg);
+}
+.slide::before {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; left: 120px;
+    width: 2px;
+    background: rgba(216,92,67,.30);
+}
+.slide::after {
+    content: '';
+    position: absolute;
+    inset: 26px;
+    border: 1px solid var(--line);
+    pointer-events: none;
+}
+
+/* ===========================================
+   SLIDE SCAFFOLD
+   =========================================== */
+.slide-inner { position: absolute; inset: 0; padding: 82px 110px 110px 170px; }
+.eyebrow {
+    font-family: var(--font-mono);
+    font-size: 21px;
+    letter-spacing: .32em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 20px;
+}
+h1 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 132px;
+    line-height: 1.02;
+    letter-spacing: -0.015em;
+}
+h2 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 60px;
+    line-height: 1.05;
+    margin-bottom: 38px;
+}
+h2 em { font-style: italic; color: var(--amber); }
+p.lede { font-size: 30px; line-height: 1.5; color: var(--cream); max-width: 1320px; }
+p.lede strong { color: var(--amber); font-weight: 600; }
+
+.slide-foot {
+    position: absolute;
+    left: 170px; right: 110px; bottom: 48px;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 18px;
+    color: var(--muted);
+    letter-spacing: .08em;
+}
+.slide-foot .doc { color: var(--amber); }
+
+/* ===========================================
+   COMPONENTS
+   =========================================== */
+.chip-row { display: flex; gap: 18px; flex-wrap: wrap; }
+.chip {
+    font-family: var(--font-mono);
+    font-size: 21px;
+    padding: 12px 24px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--muted);
+    background: var(--panel);
+}
+.chip.hot { color: var(--amber); border-color: rgba(226,162,60,.45); background: var(--amber-dim); }
+.chip.ok  { color: var(--green); border-color: rgba(135,184,123,.45); }
+
+.cards { display: grid; gap: 26px; }
+.card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 30px 34px;
+    position: relative;
+}
+.card .k {
+    font-family: var(--font-mono);
+    font-size: 19px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 13px;
+}
+.card h3 { font-family: var(--font-display); font-size: 33px; font-weight: 500; margin-bottom: 12px; }
+.card p { font-size: 22.5px; line-height: 1.5; color: var(--muted); }
+.card p strong { color: var(--cream); font-weight: 600; }
+.card p .r { color: var(--red); font-weight: 600; }
+.card p .g { color: var(--green); font-weight: 600; }
+.card p .a { color: var(--amber); font-weight: 600; }
+.card .num {
+    position: absolute;
+    top: 22px; right: 30px;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 48px;
+    color: rgba(237,232,218,.13);
+}
+
+/* big metric */
+.metric { text-align: left; }
+.metric .v { font-family: var(--font-display); font-size: 74px; color: var(--cream); line-height: 1; }
+.metric .v.red { color: var(--red); }
+.metric .v.green { color: var(--green); }
+.metric .v.amber { color: var(--amber); }
+.metric .l { font-family: var(--font-mono); font-size: 19px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: 12px; }
+
+table.ltable { width: 100%; border-collapse: collapse; }
+table.ltable th {
+    font-family: var(--font-mono);
+    font-size: 19px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    text-align: left;
+    padding: 0 22px 14px 22px;
+    border-bottom: 2px solid rgba(226,162,60,.4);
+}
+table.ltable td {
+    font-size: 22px;
+    line-height: 1.45;
+    color: var(--muted);
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+}
+table.ltable td.c1 { font-family: var(--font-mono); color: var(--cream); font-size: 20px; }
+table.ltable td strong { color: var(--cream); font-weight: 600; }
+table.ltable td .kill { color: var(--red); font-family: var(--font-mono); font-size: 20px; }
+
+.stamp {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    letter-spacing: .3em;
+    text-transform: uppercase;
+    border: 3px solid currentColor;
+    border-radius: 8px;
+    padding: 10px 26px 10px 32px;
+    transform: rotate(-4deg);
+    opacity: .92;
+    white-space: nowrap;
+}
+.stamp.kill { color: var(--red); }
+.stamp.pass { color: var(--green); }
+.stamp.sign { color: var(--amber); }
+
+.banner {
+    border: 1px solid rgba(226,162,60,.4);
+    background: linear-gradient(90deg, var(--amber-dim), transparent 70%);
+    border-radius: 14px;
+    padding: 26px 40px;
+    display: flex;
+    align-items: center;
+    gap: 44px;
+}
+.banner p { font-family: var(--font-display); font-size: 30px; line-height: 1.35; }
+.banner p strong { color: var(--amber); font-weight: 600; }
+.banner.red { border-color: rgba(216,92,67,.4); background: linear-gradient(90deg, rgba(216,92,67,.10), transparent 70%); }
+.banner.red p strong { color: var(--red); }
+.banner.green { border-color: rgba(135,184,123,.4); background: linear-gradient(90deg, rgba(135,184,123,.10), transparent 70%); }
+.banner.green p strong { color: var(--green); }
+
+/* timeline */
+.timeline { display: flex; gap: 0; margin-top: 10px; }
+.timeline .tl {
+    flex: 1;
+    border-top: 2px solid rgba(226,162,60,.45);
+    padding: 24px 28px 0 0;
+    position: relative;
+}
+.timeline .tl::before {
+    content: '';
+    position: absolute;
+    top: -7px; left: 0;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--amber);
+}
+.timeline .tl .d { font-family: var(--font-mono); font-size: 20px; color: var(--amber); letter-spacing: .1em; }
+.timeline .tl h3 { font-family: var(--font-display); font-size: 30px; font-weight: 500; margin: 10px 0 10px; }
+.timeline .tl p { font-size: 21px; line-height: 1.45; color: var(--muted); padding-right: 10px; }
+.timeline .tl p strong { color: var(--cream); }
+
+.reveal {
+    opacity: 0;
+    transform: translateY(26px);
+    transition: opacity var(--duration-normal) var(--ease-out-expo),
+                transform var(--duration-normal) var(--ease-out-expo);
+}
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.reveal:nth-child(1) { transition-delay: .05s; }
+.reveal:nth-child(2) { transition-delay: .15s; }
+.reveal:nth-child(3) { transition-delay: .25s; }
+.reveal:nth-child(4) { transition-delay: .35s; }
+.reveal:nth-child(5) { transition-delay: .45s; }
+.reveal:nth-child(6) { transition-delay: .55s; }
+
+/* ===========================================
+   DECK CHROME
+   =========================================== */
+.progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: var(--amber);
+    z-index: 1001;
+    transition: width .35s var(--ease-out-expo);
+}
+.counter {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: .15em;
+    color: var(--muted);
+    background: rgba(12,16,14,.7);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 18px;
+}
+.edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
+.edit-toggle {
+    position: fixed; top: 16px; left: 16px;
+    z-index: 10001;
+    font-size: 18px;
+    background: var(--panel-2);
+    color: var(--cream);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s ease;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+.edit-toggle.active { border-color: var(--amber); color: var(--amber); }
+body.editing [contenteditable="true"]:hover { outline: 1px dashed rgba(226,162,60,.6); }
+body.editing [contenteditable="true"]:focus { outline: 2px solid var(--amber); }
+</style>
+</head>
+<body>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage" aria-label="strategy-factory PLAN explainer">
+
+<!-- ================= SLIDE 1 — TITLE ================= -->
+<section class="slide active" aria-label="Title">
+  <div class="slide-inner" style="display:flex; flex-direction:column; justify-content:center;">
+    <div class="eyebrow reveal">TechTrading · strategy-factory · docs/PLAN.md</div>
+    <h1 class="reveal">The decision <em style="font-style:italic; color:var(--amber);">record</em></h1>
+    <p class="lede reveal" style="margin-top:42px;">
+      Mechanizing the method: written <strong>2026-09-29</strong>, the day Phase 2 research was
+      paused — and the roadmap it set out, M0 through M8, <strong>closed one day later</strong>.
+      This deck is the why behind every choice, and what each milestone found.
+    </p>
+    <div class="chip-row reveal" style="margin-top:54px;">
+      <span class="chip ok">M0–M8 complete</span>
+      <span class="chip hot">dry-run bot live on GCP</span>
+      <span class="chip">repo public, protected main</span>
+      <span class="chip">money at risk: none</span>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/PLAN.md</span><span>strategy-factory · explainer 3 of 3</span></div>
+</section>
+
+<!-- ================= SLIDE 2 — TIMELINE / STATUS ================= -->
+<section class="slide" aria-label="Status at a glance">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§0 Status at a glance</div>
+    <h2 class="reveal">From pivot to live VM in <em>two days</em></h2>
+    <div class="timeline reveal">
+      <div class="tl">
+        <div class="d">2026-09-26 → 29</div>
+        <h3>The manual gauntlet</h3>
+        <p>Six hypotheses tested by hand, <strong>all six killed</strong> at measured gates. Phase 2
+        research paused — ideas ran out, not patience.</p>
+      </div>
+      <div class="tl">
+        <div class="d">2026-09-29</div>
+        <h3>Pivot day: M0–M5</h3>
+        <p>Scaffold, <strong>golden test</strong> (1,028 trades, exact), gates + graveyard,
+        orchestrator, splitter + DSR, LLM stages — built and tested the same day.</p>
+      </div>
+      <div class="tl">
+        <div class="d">2026-09-30</div>
+        <h3>M6–M8: rehearsal to live</h3>
+        <p>Full-pipeline rehearsal (two instructive kills), <strong>deploy live on GCP</strong>,
+        review flow + calendar-holdout accrual. Repo flipped public after a history audit.</p>
+      </div>
+      <div class="tl">
+        <div class="d">since · ~2026-10-30</div>
+        <h3>Calendar time</h3>
+        <p>Oct-14 carry-overs landed (tear sheet in dossier, factor-screen DSL). One open item:
+        <strong>the 30-day dry-run review</strong>.</p>
+      </div>
+    </div>
+    <div class="banner reveal" style="margin-top:52px;">
+      <span class="stamp sign">locked §11</span>
+      <p>Decisions, all answered 2026-09-29: cloud = <strong>GCP</strong> · secondary data =
+      <strong>Kraken</strong> · lab <strong>absorbed in-repo</strong> · budget
+      <strong>US$100/month</strong> · pushes <strong>paused</strong> — commits stay local until the
+      user says "push".</p>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/PLAN.md §0 · §11</span><span>status · locked decisions</span></div>
+</section>
+
+<!-- ================= SLIDE 3 — VERDICT ================= -->
+<section class="slide" aria-label="Verdict first">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§1 Verdict first</div>
+    <h2 class="reveal">What the factory <em>is</em> — and what it isn't</h2>
+    <div class="cards" style="grid-template-columns: 1fr 1fr; margin-top:8px;">
+      <div class="card reveal">
+        <div class="num">1</div>
+        <h3>The method, mechanized — not a new trading idea</h3>
+        <p>The stages <strong>are</strong> the manual gauntlet. What it buys is cost-per-hypothesis:
+        the manual loop took ~a day; the harness runs in <strong>~15 minutes</strong>. The bottleneck
+        it does <span class="r">not</span> remove is idea quality.</p>
+      </div>
+      <div class="card reveal">
+        <div class="num">2</div>
+        <h3>A factory is a multiple-comparisons machine</h3>
+        <p>Automating search multiplies trials — exactly what inflates Sharpe. The answer is
+        structural: <strong>trial ledger, holdout lockout, pre-registration as a blocking
+        gate</strong>. Three outside "strategy pipelines" on the shelf demonstrate the failure
+        mode; the pipeline shape is not the protection, <span class="a">the ledger is</span>.</p>
+      </div>
+      <div class="card reveal">
+        <div class="num">3</div>
+        <h3>The named risk: the fifth plumbing project</h3>
+        <p>Four predecessors died where plumbing met strategy. Countermeasures: <strong>freqtrade
+        stays the engine</strong>, a golden test from week one, and the regression fixtures are
+        <strong>the dead strategies themselves</strong>.</p>
+      </div>
+      <div class="card reveal">
+        <div class="num">4</div>
+        <h3>One deliberate refusal</h3>
+        <p>No LLM meta-agent orchestrator. <strong>Authority enforced by prompt is negotiable by
+        definition</strong> — here it is hash-checked signatures and plain code. LLM judgment lives
+        inside stages, never between them.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/PLAN.md §1</span><span>verdict</span></div>
+</section>
+
+<!-- ================= SLIDE 4 — LINEAGE ================= -->
+<section class="slide" aria-label="Design lineage">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§2 Design lineage</div>
+    <h2 class="reveal">Patterns <em>adopted</em>, patterns <em>refused</em></h2>
+    <table class="ltable reveal">
+      <thead><tr><th style="width:720px;">Established pattern (multi-agent build systems)</th><th>Factory adaptation</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Pipeline of role-scoped worker agents, restricted tool sets</td>
+          <td><strong>Adopted</strong> — roles are Research / Screen / Pre-register / Implement /
+          Validate / Deploy / Observe, with three transitions as human gates</td>
+        </tr>
+        <tr>
+          <td>DB-first state; filesystem as materialization</td>
+          <td><strong>Manifest-first instead</strong> — runs/&lt;id&gt;/ is authoritative, SQLite
+          derived. Right weight for one user, and it diffs in git</td>
+        </tr>
+        <tr>
+          <td>Per-stage validators (quality gates)</td>
+          <td><strong>Adopted</strong> — but ours are <em style="color:var(--cream);">scientific</em>
+          gates with measured provenance, not lint</td>
+        </tr>
+        <tr>
+          <td>Build manifests + resume + replay-from-stage</td>
+          <td><strong>Adopted verbatim</strong> — a replay with changed inputs is a
+          <strong>new trial</strong>, and the ledger records it</td>
+        </tr>
+        <tr>
+          <td>LLM meta-agent as orchestrator</td>
+          <td><span class="kill">REFUSED</span> — deterministic state machine; sequencing, retries
+          and gate arithmetic are plain code</td>
+        </tr>
+        <tr>
+          <td>Web UI, multi-tenant service architecture</td>
+          <td><span class="kill">NOT CARRIED</span> — one user, one machine, CLI first; notebooks
+          per gate are the review surface</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/PLAN.md §2</span><span>lineage</span></div>
+</section>
+
+<!-- ================= SLIDE 5 — STANDING RULES ================= -->
+<section class="slide" aria-label="Standing rules">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§3 · §4 The pipeline's standing rules</div>
+    <h2 class="reveal">Rules that wait for <em>the day of temptation</em></h2>
+    <div class="cards" style="grid-template-columns: 1fr 1fr; margin-top:8px;">
+      <div class="card reveal">
+        <div class="k">Signatures, not vibes</div>
+        <p><strong>factory approve</strong> records who/when/artifact-hash; tampering voids the
+        signature and the orchestrator refuses to advance. <strong>factory reject</strong> records
+        human kills with reasons — approve and reject pair on the record.</p>
+      </div>
+      <div class="card reveal">
+        <div class="k">Automated sources are trial families</div>
+        <p>Any mechanism producing hypothesis cards without a human — a scanner, a scheduled
+        survey, an LLM on cron — is <strong>a trial family with a pre-registered, signed
+        budget</strong>; a spent budget halts the source. None exists today;
+        <strong>the rule exists for the day the temptation comes.</strong></p>
+      </div>
+      <div class="card reveal">
+        <div class="k">The graveyard is ground truth</div>
+        <p>Every gate exists because something was <strong>measured in September 2026</strong>.
+        Six corpses, each re-killed by the right gate in the test suite — the one asset a
+        from-scratch factory would not have.</p>
+      </div>
+      <div class="card reveal">
+        <div class="k">The ledger is deliberately humiliating</div>
+        <p>Every backtest, hyperopt, screen and re-run appends — <strong>the count only goes
+        up</strong>, which makes the deflated Sharpe honest and doubles as the cost odometer
+        against the US$100/month budget.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/PLAN.md §3–§4</span><span>standing rules</span></div>
+</section>
+
+<!-- ================= SLIDE 6 — M4 FINDINGS ================= -->
+<section class="slide" aria-label="M4 findings">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§12 M4 executed — the re-judge under the purged splitter</div>
+    <h2 class="reveal">The machinery validated <em>against the record</em></h2>
+    <div class="reveal" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:28px;">
+      <div class="card">
+        <div class="metric"><div class="v green">7 / 7</div><div class="l">OOS folds reproduced exactly</div></div>
+        <p style="margin-top:16px;">All §15 control-column folds to the last digit — the factory is
+        validated against the recorded record, <strong>not against itself</strong>.</p>
+      </div>
+      <div class="card">
+        <div class="metric"><div class="v amber">89 %</div><div class="l">of fold-4 P&L inside the purge zone</div></div>
+        <p style="margin-top:16px;">With an 87-day purge, 12–22 % of in-sample trades sat on the
+        contaminated boundary — <strong>every prior hyperopt result was fitted on that
+        margin</strong>.</p>
+      </div>
+      <div class="card">
+        <div class="metric"><div class="v red">0.036</div><div class="l">H3's deflated Sharpe (DSR)</div></div>
+        <p style="margin-top:16px;">Deflated against <strong>24 comparable trials on the
+        ledger</strong>: a 3.6 % chance the true SR beats best-of-noise. G-passive reached the same
+        verdict independently. <strong>Two instruments, one reading.</strong></p>
+      </div>
+    </div>
+    <div class="banner red reveal" style="margin-top:44px;">
+      <span class="stamp kill">leak found</span>
+      <p>The embargo check surfaced a defect in the <strong>old</strong> harness: recorded rolling
+      folds violate any embargo ≥ 1 day — post-hoc iteration on early-fold results leaked into
+      later folds' training data. The lab's own splitter fails U1 on both axes.</p>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/PLAN.md §12</span><span>M4 — splitter · DSR · full S5</span></div>
+</section>
+
+<!-- ================= SLIDE 7 — M5 FINDINGS ================= -->
+<section class="slide" aria-label="M5 findings">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§13 M5 executed — real agents, real gates</div>
+    <h2 class="reveal">The gates bit <em>on day one</em></h2>
+    <div class="cards" style="grid-template-columns: 1fr 1fr; margin-top:8px;">
+      <div class="card reveal">
+        <div class="k">Run 1 — killed at S2, correctly</div>
+        <p>The intake agent chose <strong>more conservative priors than prompted</strong>, and the
+        noise-floor gate killed the card: needs ≥ 683 trades, history supplies 260.
+        <span class="r">The first real run died the way untestable designs should.</span></p>
+      </div>
+      <div class="card reveal">
+        <div class="k">Run 2 — the full path to S4</div>
+        <p>Card → research memo → screens pass → pre-reg <strong>including a tripwire the agent
+        added itself</strong> (any hold &gt; 30 days fails the run on protocol) → signed at HG1 →
+        implemented clean → causal checks → smoke backtest, 55 trades.</p>
+      </div>
+      <div class="card reveal">
+        <div class="k">The factory caught its own defects</div>
+        <p>(a) A <strong>needs_human</strong> stage could re-run forever — now blocking, cleared only
+        by signature. (b) A banned execution-pricing pattern slipped into S4 — now blocked by prompt
+        <strong>and</strong> static check, and <strong>replay-from-stage</strong> was built to rerun
+        it; the HG1 signature survived because its hashed artifacts were untouched.</p>
+      </div>
+      <div class="card reveal">
+        <div class="k">The odometer reading</div>
+        <p style="font-size:22px;">Whole acceptance, 7 agent calls, itemized on the ledger:</p>
+        <div class="metric" style="margin-top:14px;"><div class="v amber">US$6.39</div><div class="l">total LLM cost · budget US$100/mo</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/PLAN.md §13</span><span>M5 — LLM stages · HG1 flow</span></div>
+</section>
+
+<!-- ================= SLIDE 8 — M6 FINDINGS ================= -->
+<section class="slide" aria-label="M6 findings">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§14 M6 executed — the rehearsal</div>
+    <h2 class="reveal">Gates passed. The human <em>killed it anyway.</em></h2>
+    <p class="lede reveal" style="font-size:26px; color:var(--muted); margin-bottom:36px;">
+      The signed toy looked genuinely tempting — zero-fee +99.8 %, cost coverage 24×, OOS mean
+      +5.18 %, SR 1.02 — <strong style="color:var(--cream);">which is the design, not a contradiction:</strong>
+      the dossier handed HG2 three clean counts.
+    </p>
+    <div class="reveal" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:28px;">
+      <div class="card">
+        <div class="k">Count 1 · protocol</div>
+        <div class="metric"><div class="v red">107 d</div><div class="l">max realized hold vs 30-day tripwire</div></div>
+        <p style="margin-top:14px;">Its own signed prereg: any hold &gt; 30 days fails the run.
+        <strong>The agent-drafted tripwire was the sharpest criterion in the document</strong> —
+        and it means the 30-day purge was undersized, tainting even the OOS table.</p>
+      </div>
+      <div class="card">
+        <div class="k">Count 2 · concentration</div>
+        <div class="metric"><div class="v red">48 %</div><div class="l">of profit in one month · ceiling 40 %</div></div>
+        <p style="margin-top:14px;">The failure mode the deterministic gates <strong>provably cannot
+        see in-sample</strong>; skew +3.7 and kurtosis 72 say the same thing.</p>
+      </div>
+      <div class="card">
+        <div class="k">Count 3 · deflated Sharpe</div>
+        <div class="metric"><div class="v red">0.091</div><div class="l">DSR vs pre-registered 0.5 floor</div></div>
+        <p style="margin-top:14px;">Within the 24-trial comparable family. Recorded via the new
+        <strong>factory reject</strong> verb — the missing half of the human gate.</p>
+      </div>
+    </div>
+    <div class="banner reveal" style="margin-top:40px;">
+      <span class="stamp sign">lesson</span>
+      <p>Purge sizing from <em>typical</em> hold is dangerous — condition-based exits have unbounded
+      tails. <strong>Size purges from the realized maximum</strong>, which the dossier now always
+      reports.</p>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/PLAN.md §14</span><span>M6 — rehearsal · killed at HG2</span></div>
+</section>
+
+<!-- ================= SLIDE 9 — M7 FINDINGS ================= -->
+<section class="slide" aria-label="M7 findings">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§15 M7 executed — deploy &amp; observe</div>
+    <h2 class="reveal">Rehearsed locally, <em>then live on GCP</em></h2>
+    <div class="reveal" style="display:grid; grid-template-columns: 1fr 1.25fr; gap:34px; margin-top:4px;">
+      <div style="display:flex; flex-direction:column; gap:26px;">
+        <div class="card">
+          <div class="k">factory-dryrun · e2-small · europe-west1-b</div>
+          <p>Bot running <strong>dry-run on 17 pairs</strong> with a US$2,000 paper wallet; observer
+          snapshotting every 5 min; parity writing daily. <strong>≈ US$13/month</strong> against the
+          budget. No public ports, no exchange keys on the box.</p>
+        </div>
+        <div class="card">
+          <div class="k">Silence never looks like success</div>
+          <p>The observer's alert path <strong>fired for real</strong> during rehearsal — first poll
+          landed while freqtrade was still booting. Failures are written as snapshots too.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="k">Three ops lessons, baked into provision.sh</div>
+        <p style="line-height:1.65;">
+          <span class="r">1 ·</span> <strong>Binance geo-blocks US IPs</strong> — the first VM, in
+          us-central1, died with HTTP 451; recreated in Belgium, and the script's default zone now
+          says why.<br><br>
+          <span class="r">2 ·</span> <strong>docker-compose-v2 is not a Debian 12 package</strong> —
+          the startup script silently lost docker; now installs docker.io + the compose v2 plugin and
+          waits for docker before proceeding.<br><br>
+          <span class="r">3 ·</span> <strong>A root-created data dir is unwritable for uid 1000</strong> —
+          the local rehearsal masked it because the host uid happened to match; provision now
+          pre-creates it chowned.
+        </p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/PLAN.md §15–§15.1</span><span>M7 — the VM, live</span></div>
+</section>
+
+<!-- ================= SLIDE 10 — M8 / CLOSE OF ROADMAP ================= -->
+<section class="slide" aria-label="M8 findings">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§16 M8 executed — the roadmap closes</div>
+    <h2 class="reveal">What remains is <em>calendar time</em></h2>
+    <div class="cards" style="grid-template-columns: repeat(3, 1fr); margin-top:8px;">
+      <div class="card reveal">
+        <div class="k">factory dryrun-review</div>
+        <p>Turns fetched VM artifacts into <strong>review.md</strong> — uptime, alert counts, trade
+        stats, latest parity — labeled <strong>interim</strong> until 30 observed days, then HG3
+        evidence. It says out loud what it cannot say: <strong>dry-run measures execution reality,
+        never edge.</strong></p>
+      </div>
+      <div class="card reveal">
+        <div class="k">Calendar-holdout accrual</div>
+        <p>Every review ticks the ledger: the window since 2026-09-29 <strong>matures into a clean
+        holdout at 180 days</strong> (~2027-03-28), stays HG2b-gated, and a new accrual starts
+        behind it.</p>
+      </div>
+      <div class="card reveal">
+        <div class="k">First live review</div>
+        <p><strong>97.6 % uptime over 42 snapshots, 0 trades yet, accrual day 1.</strong> Budget
+        odometer: ≈ US$6.5 LLM + ≈ US$13/month VM. 14 local commits await the user's "push".</p>
+      </div>
+    </div>
+    <div class="banner green reveal" style="margin-top:44px;">
+      <span class="stamp pass">M0–M8</span>
+      <p><strong>The roadmap closed one day after the pivot was an idea in a prompt.</strong> The
+      only live strategy is a loudly-bannered rehearsal toy, dry-running on a box in Belgium.</p>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/PLAN.md §16</span><span>M8 — review flow · accrual</span></div>
+</section>
+
+<!-- ================= SLIDE 11 — CAVEATS ================= -->
+<section class="slide" aria-label="Honest caveats">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§10 Honest caveats</div>
+    <h2 class="reveal">What the factory <em>does not fix</em></h2>
+    <div class="cards" style="grid-template-columns: 1fr 1fr; margin-top:6px; gap:22px;">
+      <div class="card reveal" style="padding:26px 32px;">
+        <div class="num">1</div>
+        <h3 style="font-size:30px;">It does not refill the idea well</h3>
+        <p style="font-size:22px;">Phase 2 paused because ideas ran out, not because testing was slow. A faster
+        gauntlet with weak inputs <strong>just fills a graveyard faster</strong> — cheap, but not
+        progress by itself.</p>
+      </div>
+      <div class="card reveal" style="padding:26px 32px;">
+        <div class="num">2</div>
+        <h3 style="font-size:30px;">Concentration is not screenable</h3>
+        <p style="font-size:22px;">Proven, not assumed: G5-style failures surface only at the tear sheet.
+        <strong>S2 cannot promise that S5 won't kill.</strong></p>
+      </div>
+      <div class="card reveal" style="padding:26px 32px;">
+        <div class="num">3</div>
+        <h3 style="font-size:30px;">LLM-written strategies are a lookahead risk</h3>
+        <p style="font-size:22px;">lookahead-analysis is blind to cross-sectional designs. Mitigations: per-strategy
+        runs, a generated causal test per implementation, and <strong>the human actually reading the
+        code</strong> at HG1/HG2.</p>
+      </div>
+      <div class="card reveal" style="padding:26px 32px;">
+        <div class="num">4 · 5</div>
+        <h3 style="font-size:30px;">Costs, and the dual-sync tax</h3>
+        <p style="font-size:22px;">API tokens, the VM invoice, the temptation to run S2 in bulk — <strong>the trial
+        ledger doubles as the odometer</strong>. And Dropbox syncs what git ignores: run artifacts
+        must stay lean.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/PLAN.md §10</span><span>caveats</span></div>
+</section>
+
+<!-- ================= SLIDE 12 — NEXT STEPS ================= -->
+<section class="slide" aria-label="Next steps">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§17 Next steps — calendar</div>
+    <h2 class="reveal">Three dates, <em>one discipline</em></h2>
+    <div class="cards" style="grid-template-columns: repeat(3, 1fr); margin-top:14px;">
+      <div class="card reveal">
+        <div class="k">~2026-10-30</div>
+        <h3>The 30-day dry-run review</h3>
+        <p>The first <strong>HG3-grade judgment conducted through the factory</strong>: fetch the VM
+        artifacts, run <span style="font-family:var(--font-mono); font-size:20px;">factory dryrun-review</span>.
+        Until then, daily parity reports accumulate on the box.</p>
+      </div>
+      <div class="card reveal">
+        <div class="k">~2027-03-28</div>
+        <h3>The accrued holdout matures</h3>
+        <p>180 days from 2026-09-29. It becomes <strong>clean, not free</strong>: spending it still
+        takes a pre-registration and a signed HG2b.</p>
+      </div>
+      <div class="card reveal">
+        <div class="k">Continuous</div>
+        <h3>The next real hypothesis</h3>
+        <p>The factory did not change where ideas come from: <strong>reading, then
+        <span style="font-family:var(--font-mono); font-size:20px;">factory new</span></strong>.
+        A pre-registered battery of four cross-sectional factor families waits on the user's pick.</p>
+      </div>
+    </div>
+    <div class="banner reveal" style="margin-top:44px;">
+      <span class="stamp sign">§17.8</span>
+      <p>The screen is computationally free but <strong>not epistemically free</strong>: every
+      expression screened is a ledger trial deflating the eventual survivor's Sharpe — so
+      pre-register a small named battery, <strong>never sweep fifty variants because the DSL makes
+      it easy.</strong></p>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/PLAN.md §17</span><span>calendar · candidate battery</span></div>
+</section>
+
+<!-- ================= SLIDE 13 — RESEARCH TOPICS ================= -->
+<section class="slide" aria-label="Research topics">
+  <div class="slide-inner">
+    <div class="eyebrow reveal">§17 Next steps — research topics</div>
+    <h2 class="reveal">The reading <em>queue</em></h2>
+    <div class="cards" style="grid-template-columns: repeat(3, 1fr); gap:22px; margin-top:4px;">
+      <div class="card reveal" style="padding:24px 30px;">
+        <div class="k">1 · Factory-as-skills</div>
+        <p style="font-size:21px;">Package the discipline as Claude Code skills so a plain session behaves like the
+        factory. Acceptance: <strong>the skills alone must re-kill the graveyard</strong>, for the
+        same reasons.</p>
+      </div>
+      <div class="card reveal" style="padding:24px 30px;">
+        <div class="k">2 · Jev typed decisions</div>
+        <p style="font-size:21px;">Typed values with confidence scores for non-generative decision points (card
+        extraction, screen routing, graveyard kinship). <strong>Validate the vendor claims against
+        the model each stage actually uses</strong> — never a frontier default.</p>
+      </div>
+      <div class="card reveal" style="padding:24px 30px;">
+        <div class="k">3 · Caches (Headroom)</div>
+        <p style="font-size:21px;">LLM-context compression + engine-result caching on exact content hashes.
+        <strong>The odometer judges it</strong>: compression that breaks provider cache reuse can
+        raise the bill.</p>
+      </div>
+      <div class="card reveal" style="padding:24px 30px;">
+        <div class="k">4–6 · Feature families for S1</div>
+        <p style="font-size:21px;">Causal EMD, MASS similarity search, cross-asset regime features — all under
+        <strong>the causal-fit rule</strong>: anything fitted must use data ≤ t, frozen, rolled
+        forward; every clustering choice is a ledger trial.</p>
+      </div>
+      <div class="card reveal" style="padding:24px 30px;">
+        <div class="k">9 · ML diagnostics</div>
+        <p style="font-size:21px;">For self-labelled candidates: report agreement with the naive rule that generated
+        the labels — <strong>the model must beat the rule, not the coin</strong> (86 % OOS accuracy
+        was 85 % rule-agreement).</p>
+      </div>
+      <div class="card reveal" style="padding:24px 30px; border-color:rgba(226,162,60,.5); background:linear-gradient(180deg, var(--amber-dim), var(--panel));">
+        <div class="k">The through-line</div>
+        <p style="font-size:21px; color:var(--cream);">Every topic ends at the same place: <strong>a measured
+        comparison on the graveyard fixtures, counted on the ledger.</strong> Validate, don't
+        repeat.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="doc">docs/PLAN.md §17</span><span>end of deck 3 · ← design.html</span></div>
+</section>
+
+</main>
+</div>
+
+<!-- deck chrome -->
+<div class="progress" id="progressBar"></div>
+<div class="deck-controls"><span class="counter" id="counter">1 / 13</span></div>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E) — Ctrl+S saves a copy">✎ edit</button>
+
+<script>
+/* === SLIDE PRESENTATION CONTROLLER — keyboard / wheel / touch, uniform stage scaling === */
+class SlidePresentation {
+    constructor() {
+        this.slides = document.querySelectorAll('.slide');
+        this.current = 0;
+        this.stage = document.getElementById('deckStage');
+        this.bar = document.getElementById('progressBar');
+        this.counter = document.getElementById('counter');
+        this.setupStageScale();
+        this.setupKeyboard();
+        this.setupWheel();
+        this.setupTouch();
+        /* deep-linking: #3 opens slide 3 */
+        const fromHash = () => this.show((parseInt(location.hash.slice(1), 10) || 1) - 1);
+        window.addEventListener('hashchange', fromHash);
+        fromHash();
+    }
+    setupStageScale() {
+        const scale = () => {
+            const f = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+            const x = (window.innerWidth - 1920 * f) / 2;
+            const y = (window.innerHeight - 1080 * f) / 2;
+            this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+        };
+        scale();
+        window.addEventListener('resize', scale);
+    }
+    setupKeyboard() {
+        document.addEventListener('keydown', (e) => {
+            if (e.target.getAttribute && e.target.getAttribute('contenteditable')) return;
+            if (['ArrowRight',' ','PageDown'].includes(e.key)) { e.preventDefault(); this.show(this.current + 1); }
+            else if (['ArrowLeft','PageUp'].includes(e.key)) { e.preventDefault(); this.show(this.current - 1); }
+            else if (e.key === 'Home') this.show(0);
+            else if (e.key === 'End') this.show(this.slides.length - 1);
+        });
+    }
+    setupWheel() {
+        let lock = false;
+        window.addEventListener('wheel', (e) => {
+            if (lock || document.body.classList.contains('editing')) return;
+            if (Math.abs(e.deltaY) < 24) return;
+            lock = true;
+            this.show(this.current + (e.deltaY > 0 ? 1 : -1));
+            setTimeout(() => lock = false, 650);
+        }, { passive: true });
+    }
+    setupTouch() {
+        let x0 = null;
+        window.addEventListener('touchstart', e => x0 = e.touches[0].clientX, { passive: true });
+        window.addEventListener('touchend', e => {
+            if (x0 === null) return;
+            const dx = e.changedTouches[0].clientX - x0;
+            if (Math.abs(dx) > 50) this.show(this.current + (dx < 0 ? 1 : -1));
+            x0 = null;
+        }, { passive: true });
+    }
+    show(i) {
+        this.current = Math.max(0, Math.min(i, this.slides.length - 1));
+        this.slides.forEach((s, k) => {
+            s.classList.toggle('active', k === this.current);
+            s.classList.toggle('visible', k === this.current);
+        });
+        this.bar.style.width = ((this.current + 1) / this.slides.length * 100) + '%';
+        this.counter.textContent = (this.current + 1) + ' / ' + this.slides.length;
+        history.replaceState(null, '', '#' + (this.current + 1));
+    }
+}
+
+/* === INLINE EDITOR — hover top-left or press E; Ctrl+S downloads edited copy === */
+class InlineEditor {
+    constructor(deckId) {
+        this.key = 'fs-edits-' + deckId;
+        this.isActive = false;
+        this.sel = '.deck-stage h1, .deck-stage h2, .deck-stage h3, .deck-stage p, .deck-stage .k, .deck-stage .eyebrow, .deck-stage .chip, .deck-stage .stamp, .deck-stage td, .deck-stage th, .deck-stage .metric .v, .deck-stage .metric .l, .deck-stage .tl .d, .deck-stage .slide-foot span';
+        this.restore();
+        this.wire();
+    }
+    nodes() { return document.querySelectorAll(this.sel); }
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('editing', this.isActive);
+        document.getElementById('editToggle').classList.toggle('active', this.isActive);
+        this.nodes().forEach(n => this.isActive
+            ? n.setAttribute('contenteditable', 'true')
+            : n.removeAttribute('contenteditable'));
+        if (!this.isActive) this.persist();
+    }
+    persist() {
+        const data = {};
+        this.nodes().forEach((n, i) => data[i] = n.innerHTML);
+        try { localStorage.setItem(this.key, JSON.stringify(data)); } catch (e) {}
+    }
+    restore() {
+        try {
+            const data = JSON.parse(localStorage.getItem(this.key) || 'null');
+            if (data) this.nodes().forEach((n, i) => { if (data[i] !== undefined) n.innerHTML = data[i]; });
+        } catch (e) {}
+    }
+    saveFile() {
+        this.persist();
+        const clone = document.documentElement.cloneNode(true);
+        clone.querySelectorAll('[contenteditable]').forEach(n => n.removeAttribute('contenteditable'));
+        const blob = new Blob(['<!DOCTYPE html>\n' + clone.outerHTML], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = document.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '-edited.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+    wire() {
+        const toggle = document.getElementById('editToggle');
+        const hotzone = document.getElementById('editHotzone');
+        let hideT = null;
+        toggle.addEventListener('click', () => this.toggleEditMode());
+        hotzone.addEventListener('click', () => this.toggleEditMode());
+        hotzone.addEventListener('mouseenter', () => { clearTimeout(hideT); toggle.classList.add('show'); });
+        hotzone.addEventListener('mouseleave', () => { hideT = setTimeout(() => { if (!this.isActive) toggle.classList.remove('show'); }, 400); });
+        toggle.addEventListener('mouseenter', () => clearTimeout(hideT));
+        toggle.addEventListener('mouseleave', () => { hideT = setTimeout(() => { if (!this.isActive) toggle.classList.remove('show'); }, 400); });
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'e' || e.key === 'E') && !(e.target.getAttribute && e.target.getAttribute('contenteditable'))) this.toggleEditMode();
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); this.saveFile(); }
+            if (e.key === 'Escape' && this.isActive) this.toggleEditMode();
+        });
+        document.addEventListener('input', (e) => { if (this.isActive) this.persist(); });
+    }
+}
+
+new SlidePresentation();
+new InlineEditor('sf-plan');
+</script>
+</body>
+</html>
