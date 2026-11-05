@@ -1,4 +1,4 @@
-# Dry-run review — generated 2026-09-30T11:08
+# Dry-run review — generated 2026-11-05T11:51
 
 **Interim review** — 0.14 days observed, 29.9 to go before the 30-day gate can be judged.
 
