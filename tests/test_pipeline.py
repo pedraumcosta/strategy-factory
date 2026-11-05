@@ -163,3 +163,22 @@ def test_thin_research_is_killed(tmp_path):
     st = mf.load(run_dir).stages["S1"]
     assert st["status"] == "killed"
     assert "too thin" in st["report"]
+
+
+def test_iloc_last_in_populate_is_refused_but_runtime_callbacks_pass():
+    """The iloc[-1] rule means what it says: inside populate_* the frame is
+    full history (lookahead); in runtime callbacks the analyzed frame is
+    truncated to the current candle — the standard freqtrade sizing pattern
+    (what S4 generated for LowVolRankTilt17 and the whole-file grep
+    wrongly killed twice)."""
+    in_populate = STRATEGY_OK.replace(
+        'rolling(self.FAST).mean()', 'rolling(self.FAST).mean() * d["c"].iloc[-1]')
+    problems = pipeline.check_strategy_source(in_populate, "ToySmaCross")
+    assert any("iloc[-1]" in p or "iloc" in p for p in problems)
+
+    in_callback = STRATEGY_OK + (
+        "\n\ndef custom_stake_amount(self, pair, **kwargs):\n"
+        "    df, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)\n"
+        "    return df['weight'].iloc[-1]\n")
+    problems = pipeline.check_strategy_source(in_callback, "ToySmaCross")
+    assert not problems
