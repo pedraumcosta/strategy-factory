@@ -124,7 +124,7 @@ Tech: **Python 3.12 + uv** (uv is not yet installed — M1 prerequisite), **Clau
 
 ## §6 Data — providers, partitions, ledgers
 
-- **Primary:** Binance OHLCV via `./ft download-data` (already ~75 MB in `~/freqtrade-data/`, outside Dropbox, regenerable in ~60 s). The factory's store keeps that convention: bulk data never in Dropbox, never in git.
+- **Primary:** Binance OHLCV via `./ft download-data` (already ~75 MB in `~/freqtrade-data/`, regenerable in ~60 s). Owner decision 2026-11-05: the physical home moved into the synced Dropbox tree (after the GCP account loss made "regenerable" feel thinner than "backed up"); `~/freqtrade-data/` remains the canonical access path as a symlink, so code and docs keep the convention. Bulk data still never in git. Caveat that comes with sync: the feather files must be kept available offline — an online-only placeholder reads as 0 bytes and breaks every consumer.
 - **Secondary provider for validation, not for backtesting:** **Kraken** via ccxt (user decision 2026-09-29, was §11d). Cross-provider checks are **bands, not equality** — prices legitimately differ across venues; what the audit catches is gaps, duplicate/missing candles, zero-volume stretches, and deviations beyond a tolerance that flag bad files. (Polygon.io is not a candidate: no key of our own.)
 - **Holdout lockout, physical:** the store is partitioned into `research/` and `holdout/` date ranges per §18.2's ledger (2019–2020 untouched; 2021–2025 folds spent; 2026 spent). Research invocations mount only `research/`; mounting `holdout/` requires an HG2b approval token, and the spend is written to the holdout ledger permanently. Calendar accrual gets recorded too: e.g. Oct 2026 → Mar 2027 becomes a new holdout entry once it exists.
 - **Trial ledger:** append-only `trials.jsonl` — every backtest, hyperopt, screen and re-run, with config hash and outcome. This is what makes the deflated Sharpe honest, and it is deliberately humiliating: the count only goes up.
@@ -235,6 +235,14 @@ The local rehearsal stack was torn down once the VM took over. One ops note that
 
 Three failures found live, each fixed and baked into `provision.sh`: (1) **Binance geo-blocks US IPs** — the first VM, in `us-central1`, died with HTTP 451 on `exchangeInfo`; deleted, recreated in Belgium, and the script's default zone now says why. (2) **`docker-compose-v2` is not a Debian 12 package** — the startup script silently lost docker entirely; it now installs `docker.io` plus the compose v2 plugin binary, and the setup step waits for docker before proceeding. (3) **A root-created `observer_data/` is unwritable for freqtrade's `ftuser` (uid 1000)** — the local rehearsal masked it because the host uid happened to be 1000; provision now pre-creates the directory chowned.
 
+### §15.2 The VM lost with its account — and rebuilt in São Paulo (2026-11-05)
+
+The Belgium box died off-stage: the GCP account that owned its project was closed in early November 2026, and the project — VM, disks, ~30 days of observer data — was deleted with it (verified 2026-11-05: the project resolves to *not found* from every credential on hand, and the only fetches ever taken were day 0's). **What was lost is the ops rehearsal, not candidate evidence** — the box was dry-running the HG2-killed toy, and no real candidate has ever reached S6. The calendar-holdout accrual (§16) is unharmed: it ledgers wall-clock time, not VM uptime, and stood at day 37 of 180 on the day of the post-mortem.
+
+The rebuild, same day, owner's decision ("start over, same experiment"): a fresh project under a personal account, and a standing rule — **all GCP resources now live in São Paulo (`southamerica-east1`)**. `provision.sh` ran unchanged: `factory-dryrun`, e2-small, `southamerica-east1-c` (zone `-b` was capacity-exhausted that afternoon — a fourth ops lesson: `ZONE_RESOURCE_POOL_EXHAUSTED` is a try-the-next-zone error, not a config error), ≈ US$19/month (São Paulo prices above Belgium's ≈ US$13). Verified live: **Binance answers HTTP 200 from a Brazilian IP** (the §15.1 lesson only forbids US zones), all three services up, and the toy opened dry-run trades within its first minute — this window exercises the trade-recording and parity paths that the first window's quiet month never did. Day-0 fetch + review ran through the factory (`PROJECT=$PROJECT ZONE=southamerica-east1-c bash tools/fetch_dryrun.sh`); the 30-day clock restarts from 2026-11-05, review due **~2026-12-05**.
+
+Two lessons worth the price: (1) **a dry-run window is real-time evidence — it cannot be re-run**; data that lives only on the box dies with the box, so fetch on a schedule, not only at review time (the fetch is one command; the loss was a month of it). (2) Infrastructure tied to an account that can vanish for reasons outside the project is a single point of failure; the rebuild's project is owned personally.
+
 ## §16 M8 executed — the roadmap closes; what remains is calendar time (2026-09-30)
 
 The last milestone built the review half of the observe loop and mechanized §18.2's calendar rule:
@@ -253,7 +261,7 @@ The last milestone built the review half of the observe loop and mechanized §18
 
 | When | What |
 |---|---|
-| **~2026-10-30** | **The 30-day dry-run review** — the first HG3-grade judgment conducted through the factory: `PROJECT=$PROJECT ZONE=europe-west1-b bash tools/fetch_dryrun.sh`, then `factory dryrun-review runs/dryrun-review-<date>`. Until then the daily parity reports accumulate on the box |
+| ~~**~2026-10-30**~~ **~2026-12-05** | **The 30-day dry-run review** — the first HG3-grade judgment conducted through the factory: `PROJECT=$PROJECT ZONE=southamerica-east1-c bash tools/fetch_dryrun.sh`, then `factory dryrun-review runs/dryrun-review-<date>`. *(The original ~2026-10-30 review was mooted: the VM and its window died with their GCP account — §15.2. The clock restarted 2026-11-05 on the São Paulo rebuild; this time, fetch weekly, not only at review time.)* |
 | **~2027-03-28** | The calendar-accrued holdout matures (180 days from 2026-09-29). It becomes *clean*, not *free*: spending it still takes a pre-registration and a signed HG2b |
 | Continuous | The next real hypothesis. The factory did not change where ideas come from (§10.1): reading, then `factory new` |
 

@@ -38,7 +38,7 @@ Two locations, deliberately:
 | Location | Holds | In Dropbox? |
 |---|---|---|
 | `./` (this folder) | wrapper, Dockerfile, configs, strategies, research harness, backtest exports | **yes** — worth backing up |
-| `~/freqtrade-data/` | OHLCV price data (~75 MB of feather files) | **no** |
+| `~/freqtrade-data/` | OHLCV price data (~75 MB of feather files) | **yes** since 2026-11-05 — the physical home moved into the owner's synced tree; `~/freqtrade-data` stays as a symlink so every command below is unchanged |
 
 `ft` bind-mounts them together so that *inside the container* everything is at the normal
 `user_data/data` path:

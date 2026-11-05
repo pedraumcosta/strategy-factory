@@ -92,7 +92,8 @@ Tech: Python 3.12, uv, Claude Agent SDK, papermill, pytest, docker. CLI:
 ## 5. Data
 
 - Primary OHLCV: Binance via `freqtrade download-data`; bulk data lives outside the repo
-  and outside file sync (`~/freqtrade-data/` convention), regenerable.
+  (`~/freqtrade-data/` convention — since 2026-11-05 a symlink into the owner's
+  file-synced tree), regenerable.
 - Secondary provider (ccxt, second exchange): integrity cross-check only, never backtested.
 - Store partitioned `research/` vs `holdout/` by date range; the holdout ledger seeds from
   the predecessor project (2021–2025 folds spent; 2026 spent; 2019–2020 the last clean
