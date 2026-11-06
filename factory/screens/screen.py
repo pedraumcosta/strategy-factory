@@ -64,9 +64,13 @@ def registered_folds() -> list[tuple[str, str, str]]:
 
 
 def load_panels(data_dir: Path, universe: list[str],
-                timeframe: str = "1d") -> dict:
+                timeframe: str = "1d", hard_stop: str | None = HARD_STOP) -> dict:
     """{close, volume} wide panels from <data_dir>/<EXCHANGE>/SYM_USDT-<tf>.feather,
-    tz-naive daily index, capped at HARD_STOP."""
+    tz-naive daily index, capped at `hard_stop` (the screen's registered IS
+    cap by default). Pass hard_stop=None to read everything and let the
+    holdout ledger's spans decide readability instead — the similarity
+    tools (factory scenarios / novelty) do this, since the ledger, not a
+    constant, is the authority on what is spent."""
     import pandas as pd
 
     closes, vols, missing = {}, {}, []
@@ -83,8 +87,8 @@ def load_panels(data_dir: Path, universe: list[str],
     if missing:
         raise FileNotFoundError(
             f"no {timeframe} data for {missing} under {data_dir / EXCHANGE}")
-    close = pd.DataFrame(closes).sort_index().loc[:HARD_STOP]
-    volume = pd.DataFrame(vols).sort_index().loc[:HARD_STOP]
+    close = pd.DataFrame(closes).sort_index().loc[:hard_stop]
+    volume = pd.DataFrame(vols).sort_index().loc[:hard_stop]
     return {"close": close, "volume": volume}
 
 
