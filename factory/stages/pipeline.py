@@ -58,7 +58,11 @@ def _log_llm(ledger: Path, run_dir: Path, stage: str, out: dict) -> None:
 
 # --- S0 intake --------------------------------------------------------------
 
-def intake_stage(agent_fn=None, ledger: Path | None = None):
+def intake_stage(agent_fn=None, ledger: Path | None = None, kinship_fn=None):
+    """kinship_fn (card -> Verdict | None) is ADVISORY: a kin verdict goes
+    into the report and kinship.json for HG1 to judge; it never kills.
+    Default None means no kinship check — the CLI wires the real backend,
+    so no test path ever reaches a vendor."""
     agent_fn = agent_fn or llm.run_agent
 
     def stage(run_dir, manifest) -> StageResult:
@@ -76,7 +80,22 @@ def intake_stage(agent_fn=None, ledger: Path | None = None):
             return StageResult("killed", "invalid hypothesis card: " + "; ".join(problems))
         if not (art / mf.CARD_MD).exists():
             return StageResult("killed", f"{mf.CARD_MD} missing")
-        return StageResult("passed", f"card for {card['name']}", {"name": card["name"]})
+        note, data = "", {"name": card["name"]}
+        v = kinship_fn(card) if kinship_fn else None
+        if v is not None:
+            (art / mf.KINSHIP_JSON).write_text(json.dumps(
+                {"choice": v.choice, "confidence": round(v.confidence, 4),
+                 "probabilities": v.probabilities, "model": v.model}, indent=1))
+            if ledger:
+                trials.append(ledger, "vendor_api", run_dir.name,
+                              {"stage": "S0-kinship", "model": v.model,
+                               "calls": 1, "cost_usd": round(v.cost_usd, 6)})
+            data["kinship"] = v.choice
+            if v.choice != "novel":
+                note = (f" — ADVISORY: kin to closed family '{v.choice}' "
+                        f"(confidence {v.confidence:.2f}, {v.model}); "
+                        f"HG1 judges, this gate does not kill")
+        return StageResult("passed", f"card for {card['name']}{note}", data)
 
     return stage
 
@@ -260,8 +279,9 @@ def build_stages(engine, trial_ledger: Path, agent_fn=None, today: str = "",
                  holdout_ledger: Path | None = None):
     if not isinstance(engine, RecordedEngine):
         engine = RecordedEngine(engine, trial_ledger, holdout_ledger)
+    from factory.decisions import kinship_advisory
     return {
-        "S0": intake_stage(agent_fn, trial_ledger),
+        "S0": intake_stage(agent_fn, trial_ledger, kinship_fn=kinship_advisory),
         "S1": research_stage(agent_fn, trial_ledger),
         "S2": screen_stage(engine.data_dir, trial_ledger),
         "S3": prereg_stage(agent_fn, trial_ledger, today),

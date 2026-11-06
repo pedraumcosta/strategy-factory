@@ -184,3 +184,49 @@ def test_iloc_last_in_populate_is_refused_but_runtime_callbacks_pass():
         "    return df['weight'].iloc[-1]\n")
     problems = pipeline.check_strategy_source(in_callback, "ToySmaCross")
     assert not problems
+
+
+def test_kinship_advisory_surfaces_but_never_kills(tmp_path):
+    from factory.decisions import Verdict
+    kin = Verdict("lowvol_rank", {"lowvol_rank": 0.9, "novel": 0.1},
+                  0.88, "jev-1.14.0", 0.3, 4e-05)
+    stages, ledger = stages_for(tmp_path)
+    stages["S0"] = pipeline.intake_stage(
+        fake_agent_writing({"hypothesis.json": json.dumps(CARD),
+                            "hypothesis.md": "# card"}),
+        ledger, kinship_fn=lambda card: kin)
+    run_dir = mf.new_run("kin idea", tmp_path / "runs")
+    Runner(run_dir, stages).advance()
+    st = mf.load(run_dir).stages["S0"]
+    assert st["status"] == "passed"          # advisory: HG1 judges, S0 does not kill
+    assert "ADVISORY" in st["report"] and "lowvol_rank" in st["report"]
+    saved = json.loads((run_dir / "artifacts" / mf.KINSHIP_JSON).read_text())
+    assert saved["choice"] == "lowvol_rank" and saved["model"] == "jev-1.14.0"
+    recs = [json.loads(l) for l in ledger.read_text().splitlines()]
+    assert any(r["kind"] == "vendor_api" and r.get("stage") == "S0-kinship"
+               for r in recs)
+
+
+def test_novel_kinship_verdict_adds_no_advisory(tmp_path):
+    from factory.decisions import Verdict
+    novel = Verdict("novel", {"novel": 0.95, "lowvol_rank": 0.05},
+                    0.9, "jev-1.14.0", 0.3, 4e-05)
+    stages, ledger = stages_for(tmp_path)
+    stages["S0"] = pipeline.intake_stage(
+        fake_agent_writing({"hypothesis.json": json.dumps(CARD),
+                            "hypothesis.md": "# card"}),
+        ledger, kinship_fn=lambda card: novel)
+    run_dir = mf.new_run("novel idea", tmp_path / "runs")
+    Runner(run_dir, stages).advance()
+    st = mf.load(run_dir).stages["S0"]
+    assert st["status"] == "passed" and "ADVISORY" not in st["report"]
+    assert (run_dir / "artifacts" / mf.KINSHIP_JSON).exists()  # recorded anyway
+
+
+def test_kinship_backend_down_leaves_intake_untouched(tmp_path):
+    stages, _ = stages_for(tmp_path)   # default kinship_fn=None: no check
+    run_dir = mf.new_run("plain idea", tmp_path / "runs")
+    Runner(run_dir, stages).advance()
+    st = mf.load(run_dir).stages["S0"]
+    assert st["status"] == "passed"
+    assert not (run_dir / "artifacts" / mf.KINSHIP_JSON).exists()

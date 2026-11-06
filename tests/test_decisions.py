@@ -117,3 +117,19 @@ def test_eval_fixture_is_well_formed():
     kinds = {c["kind"] for c in cases}
     assert kinds == {"real", "near_miss", "reskin", "novel"}
     assert sum(c["label"] == "novel" for c in cases) >= 5   # the novel side exists
+
+
+def test_kinship_advisory_swallows_missing_key(monkeypatch):
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    assert dec.kinship_advisory(CARD, FAMILIES) is None
+
+
+def test_kinship_advisory_swallows_vendor_failure():
+    def boom(card, families):
+        raise OSError("vendor down")
+    assert dec.kinship_advisory(CARD, FAMILIES, _ask=boom) is None
+
+
+def test_kinship_advisory_passes_the_verdict_through():
+    v = dec.Verdict("novel", {"novel": 1.0}, 1.0, "jev-1.14.0", 0.1, 0.0)
+    assert dec.kinship_advisory(CARD, FAMILIES, _ask=lambda c, f: v) is v

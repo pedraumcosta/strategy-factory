@@ -25,6 +25,10 @@ import re
 import time
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
+
+FAMILIES_PATH = (Path(__file__).resolve().parents[1]
+                 / "fixtures" / "kinship_families.json")
 
 JEV_URL = "https://api.typesafe.ai/v1/systemone"
 JEV_MODEL = "jev-1.14.0"            # pinned; the response's model is logged
@@ -177,6 +181,27 @@ def claude_kinship(card: dict, families: dict, model: str,
     return Verdict(choice=choice, probabilities=probs,
                    confidence=choice_confidence(probs), model=model,
                    latency_s=round(latency, 3), cost_usd=cost)
+
+
+# --- the S0 advisory (the spike's pre-committed go/no-go, met 2026-11-06) -------
+
+def load_families(path: Path = FAMILIES_PATH) -> dict:
+    return {k: v for k, v in json.loads(path.read_text()).items()
+            if not k.startswith("_")}
+
+
+def kinship_advisory(card: dict, families: dict | None = None,
+                     _ask=None) -> Verdict | None:
+    """ADVISORY only: the verdict informs HG1, it never kills — a hard gate
+    waits for logged state-decision-outcome triples (Plan §17 topic 2).
+    Any backend failure returns None: intake must not depend on a vendor."""
+    ask = _ask or jev_kinship
+    try:
+        return ask(card, families if families is not None else load_families())
+    except DecisionUnavailable:
+        return None
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
 
 
 # --- the calibration arithmetic (our labeled set, not their distribution) -------
