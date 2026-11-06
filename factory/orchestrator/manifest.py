@@ -36,6 +36,7 @@ PREREG_MD = "prereg.md"
 DOSSIER_JSON = "dossier.json"
 DOSSIER_MD = "dossier.md"
 TEARSHEET_PNG = "tearsheet.png"
+KINSHIP_JSON = "kinship.json"  # advisory, optional: absent when no decision backend
 
 # What each gate signs over: the artifacts the human is certifying they read.
 # hg3 guards S6 deploy (DESIGN §2); S6/S7 have no stage implementation yet,

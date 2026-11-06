@@ -1,0 +1,20 @@
+{
+ "jev": {
+  "model": "jev-1.14.0",
+  "n": 24,
+  "unparseable": 0,
+  "accuracy": 0.9583333333333334,
+  "brier": 0.05093333333333334,
+  "ece": 0.05833333333333334,
+  "mean_latency_s": 0.30445833333333333,
+  "total_cost_usd": 0.001089186,
+  "misses": [
+   {
+    "id": "nv_stable_flow",
+    "label": "novel",
+    "chose": "volume_shock",
+    "confidence": 0.72
+   }
+  ]
+ }
+}

@@ -1,0 +1,39 @@
+{
+ "_comment": "Closed idea-space families from the recorded kills (graveyard.json holds the numbers; this holds the KINSHIP descriptions a decision model judges against). A family's scope is what the kill record or signed prereg closed, in the plan's own language. Maintained as kills accrue.",
+ "risk_adjusted_momentum": {
+  "description": "Cross-sectional momentum rankings on this universe, plain or risk-adjusted (return divided by own volatility), ANY lookback — nearby lookbacks are the same family. H1/H3: IC negative at 9 of 9 horizons (pooled t -6.1), top quintile worst of five.",
+  "source": "Plan §15/§22, graveyard h1_xsmomentum_tuned + h1h3_factor"
+ },
+ "lowvol_rank": {
+  "description": "Long-only low-volatility / stability level rankings on this universe, any volatility measure, window or rebalance scheme. Closed PERMANENTLY by signed prereg: rank IC was real (t 5.0, 7/7 folds) and the monetization lost 33.4% at ZERO fees.",
+  "source": "Plan §17.8 final verdict 2026-11-05, graveyard lowvol_ranktilt"
+ },
+ "distance_from_highs": {
+  "description": "Proximity-to-trailing-high rankings (breakout proximity, 52-week-high anchoring), any lookback or entry/exit hysteresis. Killed at the S2 estimate gates: the monetizable edge is too thin for its costs in any per-trade accounting that doesn't borrow beta.",
+  "source": "Plan §17.8 final verdict 2026-11-05"
+ },
+ "short_term_reversal": {
+  "description": "Cross-sectional short-term reversal rankings (recent losers bounce) on ~weekly lookbacks. Failed the measured factor screen: right sign at h1 but t 1.1 — a lean, not a signal.",
+  "source": "Plan §17.8 battery results 2026-11-05"
+ },
+ "volume_shock": {
+  "description": "Cross-sectional abnormal-volume / attention rankings (recent volume vs its own baseline). Failed the measured factor screen in the registered battery.",
+  "source": "Plan §17.8 battery results 2026-11-05"
+ },
+ "breadth_regime_gate": {
+  "description": "Market-LEVEL regime timing of the whole basket — breadth gates, risk-on/off overlays, any market-wide on/off exposure switch. Structurally dead on this universe's history: ~20 completed regime episodes vs thousands needed at the noise floor; a timing book has no cross-sectional multiplicity.",
+  "source": "Plan §17 topic 6 resolution 2026-11-06 (BreadthRegimeGate17)"
+ },
+ "cemd_trend_reversion": {
+  "description": "Cross-sectional reversion toward an ADAPTIVE trend anchor (causal EMD trend, adaptive moving averages, filtered fair values) — snap-back-to-filter readings. IC statistically zero at every horizon with valid calibration.",
+  "source": "Plan §17 topic 4 resolution 2026-11-06 (CemdTrendReversion17)"
+ },
+ "trend_voltarget": {
+  "description": "Single-pair trend following with volatility-targeted position scaling. Cost coverage -0.04x at default parameters.",
+  "source": "Plan §13, graveyard h2_trendvoltarget"
+ },
+ "kalman_spread_reversion": {
+  "description": "Market-level spread / state-space mean reversion (Kalman-filtered pairs or baskets) with sparse episode counts. ~90 trades available vs 2,400 needed at sd 15pp on a 21-day hold.",
+  "source": "Plan §21, graveyard h4_kalman_spread"
+ }
+}

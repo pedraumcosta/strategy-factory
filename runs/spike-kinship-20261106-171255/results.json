@@ -1,0 +1,56 @@
+{
+ "haiku": {
+  "model": "claude-haiku-5-5",
+  "n": 24,
+  "unparseable": 0,
+  "accuracy": 0.875,
+  "brier": 0.13214886315536767,
+  "ece": 0.13006014220825057,
+  "mean_latency_s": 5.94025,
+  "total_cost_usd": 1.3262236,
+  "misses": [
+   {
+    "id": "nv_weekend",
+    "label": "novel",
+    "chose": "breadth_regime_gate",
+    "confidence": 0.5
+   },
+   {
+    "id": "nv_btc_leadlag",
+    "label": "novel",
+    "chose": "breadth_regime_gate",
+    "confidence": 0.444
+   },
+   {
+    "id": "nv_stable_flow",
+    "label": "novel",
+    "chose": "volume_shock",
+    "confidence": 0.8
+   }
+  ]
+ },
+ "opus": {
+  "model": "claude-opus-5-5",
+  "n": 24,
+  "unparseable": 0,
+  "accuracy": 0.9166666666666666,
+  "brier": 0.08777481174444107,
+  "ece": 0.104325890715108,
+  "mean_latency_s": 5.32625,
+  "total_cost_usd": 1.4013708,
+  "misses": [
+   {
+    "id": "nv_btc_leadlag",
+    "label": "novel",
+    "chose": "breadth_regime_gate",
+    "confidence": 0.444
+   },
+   {
+    "id": "nv_stable_flow",
+    "label": "novel",
+    "chose": "volume_shock",
+    "confidence": 0.556
+   }
+  ]
+ }
+}
