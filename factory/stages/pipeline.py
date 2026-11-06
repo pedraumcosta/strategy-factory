@@ -40,6 +40,9 @@ FORBIDDEN = [
      "strategy must not be tunable (Plan §15)"),
     (r"order_types|entry_pricing|exit_pricing",
      "execution pricing belongs to the lab config, not the strategy"),
+    (r"sklearn|fit_transform|\.fit\(",
+     "fitted objects inside a strategy violate the causal-fit rule "
+     "(parameters are fixed a priori; Plan §17 topic 6)"),
 ]
 # Scoped to populate_* bodies only: there the frame is the full history, so
 # iloc[-1] reads the last bar of the backtest. In runtime callbacks
@@ -53,7 +56,9 @@ FORBIDDEN_IN_POPULATE = [
 def _log_llm(ledger: Path, run_dir: Path, stage: str, out: dict) -> None:
     trials.append(ledger, "llm", run_dir.name,
                   {"stage": stage, "cost_usd": out.get("cost_usd"),
-                   "num_turns": out.get("num_turns")})
+                   "num_turns": out.get("num_turns"),
+                   "model": out.get("model"),
+                   "duration_s": out.get("duration_s")})
 
 
 # --- S0 intake --------------------------------------------------------------

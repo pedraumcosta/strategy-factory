@@ -14,9 +14,17 @@ odometer counts these too (Plan §11f).
 
 from __future__ import annotations
 
+import os
+import time
 from pathlib import Path
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
+
+# Pinned stage model (Plan §17 topic 2's first lesson, applied to ourselves:
+# a confidence or behavior calibrated on one model breaks quietly when the
+# version drifts underneath it). Before this pin the stages ran on whatever
+# the CLI defaulted to — unnamed and unlogged.
+MODEL = os.environ.get("FACTORY_LLM_MODEL", "claude-opus-5-5")
 
 
 class AgentUnavailable(RuntimeError):
@@ -33,8 +41,9 @@ def load_prompt(name: str, **subs: str) -> str:
 def run_agent(prompt: str, cwd: Path, allowed_tools: list[str],
               system_prompt: str | None = None, max_turns: int = 40) -> dict:
     """Run one agent session, working directory = the run's artifacts dir.
-    Returns {"result", "cost_usd", "num_turns"} — the artifacts on disk are
-    what matter; the cost feeds the budget odometer."""
+    Returns {"result", "cost_usd", "num_turns", "model", "duration_s"} — the
+    artifacts on disk are what matter; the cost, model and latency feed the
+    budget odometer."""
     try:
         import anyio
         from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
@@ -50,15 +59,19 @@ def run_agent(prompt: str, cwd: Path, allowed_tools: list[str],
         permission_mode="bypassPermissions",
         system_prompt=system_prompt,
         max_turns=max_turns,
+        model=MODEL,
     )
 
     async def _run() -> dict:
-        out: dict = {"result": "", "cost_usd": None, "num_turns": None}
+        out: dict = {"result": "", "cost_usd": None, "num_turns": None,
+                     "model": MODEL, "duration_s": None}
+        t0 = time.perf_counter()
         async for message in query(prompt=prompt, options=options):
             if isinstance(message, ResultMessage):
                 out["result"] = message.result or ""
                 out["cost_usd"] = getattr(message, "total_cost_usd", None)
                 out["num_turns"] = getattr(message, "num_turns", None)
+        out["duration_s"] = round(time.perf_counter() - t0, 2)
         return out
 
     return anyio.run(_run)

@@ -46,6 +46,24 @@ def validate_estimates(est: dict) -> list[str]:
         problems.append(
             f"turnover_per_trade {t} outside (0, 1] — a trade cannot "
             f"transact more than its position")
+    # Relational sanity on the gate inputs the card itself authors. The sd
+    # is the quadratic lever on the noise floor (trades_needed ~ sd^2), so
+    # understating it is THE way to game S2; the prompt forbids that in
+    # prose, this forbids it in code.
+    edge, sd, n = (est.get("gross_edge_per_trade"), est.get("per_trade_sd"),
+                   est.get("trades_available"))
+    if isinstance(edge, (int, float)) and not 0 < float(edge) < 0.5:
+        problems.append(
+            f"gross_edge_per_trade {edge} outside (0, 0.5) — a per-trade "
+            f"edge must be positive and under 50%")
+    if isinstance(sd, (int, float)) and isinstance(edge, (int, float)) \
+            and 0 < float(edge) and float(sd) < float(edge):
+        problems.append(
+            f"per_trade_sd {sd} below gross_edge_per_trade {edge} — a "
+            f"per-trade Sharpe above 1 is not an estimate, it is a number "
+            f"picked to clear the noise floor")
+    if isinstance(n, (int, float)) and float(n) < 1:
+        problems.append(f"trades_available {n} must be at least 1")
     return problems
 
 

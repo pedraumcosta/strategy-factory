@@ -184,3 +184,57 @@ def test_iloc_last_in_populate_is_refused_but_runtime_callbacks_pass():
         "    return df['weight'].iloc[-1]\n")
     problems = pipeline.check_strategy_source(in_callback, "ToySmaCross")
     assert not problems
+
+
+def test_gamed_estimates_are_refused():
+    """The sd is the quadratic lever on the noise floor; a card whose sd is
+    below its own claimed edge (per-trade Sharpe > 1) is a number picked to
+    clear the gate, and the prompt's prose rule is now a code rule."""
+    from factory import card as card_mod
+    gamed = dict(CARD, estimates={"gross_edge_per_trade": 0.02,
+                                  "per_trade_sd": 0.01,
+                                  "trades_available": 400})
+    problems = card_mod.validate(gamed)
+    assert any("picked to clear the noise floor" in p for p in problems)
+    absurd = dict(CARD, estimates={"gross_edge_per_trade": 0.6,
+                                   "per_trade_sd": 0.9,
+                                   "trades_available": 0})
+    problems = card_mod.validate(absurd)
+    assert any("under 50%" in p for p in problems)
+    assert any("at least 1" in p for p in problems)
+    assert not card_mod.validate(dict(CARD))  # the honest fixture still passes
+
+
+def test_fitted_objects_in_strategy_are_refused():
+    """Implement.md's 'no fitting' rule had no regex backstop; the causal-fit
+    rule (Plan §17 topic 6) is now refused at S4, not just in prose."""
+    src = STRATEGY_OK.replace(
+        'rolling(self.FAST).mean()',
+        'rolling(self.FAST).mean()\n        scaler.fit(d["c"])')
+    problems = pipeline.check_strategy_source(src, "ToySmaCross")
+    assert any("causal-fit" in p for p in problems)
+    assert not pipeline.check_strategy_source(STRATEGY_OK, "ToySmaCross")
+
+
+def test_llm_log_carries_model_and_latency():
+    """Topic 2's first lesson applied to ourselves: the ledger must say WHICH
+    model answered and how long it took, or no calibration is comparable."""
+    import json as _json
+    from factory.stages.pipeline import _log_llm
+
+    class FakeRunDir:
+        name = "fake-run"
+
+    def check(tmp, out):
+        _log_llm(tmp, FakeRunDir(), "S0", out)
+        rec = _json.loads(open(tmp).readlines()[-1])
+        return rec
+
+    import tempfile
+    from pathlib import Path
+    with tempfile.TemporaryDirectory() as d:
+        ledger = Path(d) / "trials.jsonl"
+        rec = check(ledger, {"cost_usd": 0.5, "num_turns": 3,
+                             "model": "claude-opus-5-5", "duration_s": 12.3})
+        assert rec["model"] == "claude-opus-5-5"
+        assert rec["duration_s"] == 12.3
