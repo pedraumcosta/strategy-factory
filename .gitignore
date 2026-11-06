@@ -2,6 +2,7 @@
 *private*
 .env
 .env.*
+!.env.example
 
 # Run artifacts: manifests are tracked, bulk outputs are not
 runs/*/artifacts/

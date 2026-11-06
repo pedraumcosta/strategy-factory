@@ -62,6 +62,8 @@ def run_backend(name: str, cases: list[dict], families: dict) -> dict:
 
 
 def main() -> None:
+    from factory.env import load_env
+    load_env()
     p = argparse.ArgumentParser()
     p.add_argument("--backends", default="haiku,opus")
     args = p.parse_args()

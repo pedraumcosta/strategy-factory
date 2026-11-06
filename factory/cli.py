@@ -341,6 +341,8 @@ def cmd_ledger(args) -> None:
 
 
 def main() -> None:
+    from factory.env import load_env
+    load_env()
     p = argparse.ArgumentParser(prog="factory", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
