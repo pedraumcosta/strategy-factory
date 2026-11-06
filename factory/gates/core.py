@@ -22,6 +22,10 @@ class GateVerdict:
     def __bool__(self) -> bool:  # pragma: no cover - convenience
         return self.passed
 
+    def md_line(self) -> str:
+        """The one spelling of a gate verdict in a markdown report."""
+        return f"- {'PASS' if self.passed else '**FAIL**'} `{self.gate}` — {self.reason}"
+
 
 def noise_floor(
     per_trade_sd: float,

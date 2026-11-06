@@ -126,7 +126,7 @@ CARD = {
 }
 
 
-def _run_s2(tmp_path, card, data_dir):
+def _run_s2(tmp_path, card, data_dir, folds=None):
     from factory.orchestrator import manifest as mf
     from factory.stages.pipeline import screen_stage
     run_dir = mf.new_run("x", tmp_path / "runs")
@@ -134,16 +134,15 @@ def _run_s2(tmp_path, card, data_dir):
     art.mkdir(exist_ok=True)
     (art / "hypothesis.json").write_text(json.dumps(card))
     ledger = tmp_path / "trials.jsonl"
-    res = screen_stage(data_dir, ledger)(run_dir, mf.load(run_dir))
+    res = screen_stage(data_dir, ledger, folds=folds)(run_dir, mf.load(run_dir))
     return res, run_dir, ledger
 
 
-def test_s2_runs_the_measured_screen_and_kills_a_dead_factor(tmp_path, monkeypatch):
+def test_s2_runs_the_measured_screen_and_kills_a_dead_factor(tmp_path):
     panels = _panel(days=640, assets=10, seed=11)
     _write_feathers(tmp_path / "data", panels)
-    import factory.screens.screen as sc
-    monkeypatch.setattr(sc, "registered_folds", lambda: FOLDS)
-    res, run_dir, ledger = _run_s2(tmp_path, CARD, tmp_path / "data")
+    # folds cross the S2 interface — no reaching past it to patch internals
+    res, run_dir, ledger = _run_s2(tmp_path, CARD, tmp_path / "data", folds=FOLDS)
     assert res.status == "killed"
     assert "factor_screen" in res.report
     report = (run_dir / "artifacts" / "screen_report.md").read_text()
@@ -188,6 +187,9 @@ def test_s2_passes_a_cheap_tilt_on_both_estimate_gates(tmp_path):
     report = (run_dir / "artifacts" / "screen_report.md").read_text()
     assert "PASS `noise_floor`" in report
     assert "PASS `cost_coverage`" in report
+    # the structured verdicts travel on the StageResult, not only in markdown
+    assert {g["gate"]: g["passed"] for g in res.data["gates"]} == {
+        "noise_floor": True, "cost_coverage": True}
 
 
 def test_s2_full_turnover_verdicts_are_unchanged(tmp_path):

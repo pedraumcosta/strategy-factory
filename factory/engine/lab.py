@@ -44,6 +44,12 @@ class BacktestResult:
     # mean per-trade return ON STAKE (freqtrade profit_mean) — the basis the
     # 3x cost rule uses; profit_total is on total capital and understates it
     profit_mean: float = 0.0
+    # freqtrade's own annualized Sharpe from the export JSON — what the
+    # deflation family (factory/validation/deflation.py) reads off the ledger
+    sharpe: float | None = None
+    timeframe: str = ""
+    start_ts: int | None = None  # epoch seconds, from the export meta
+    end_ts: int | None = None
 
     def trades_digest(self) -> str:
         """Order-independent digest of (pair, open, close) triples."""
@@ -165,6 +171,7 @@ class LabEngine:
             inner = zpath.name.replace(".zip", ".json")
             data = json.loads(z.read(inner))
         s = data["strategy"][strategy]
+        info = json.loads(meta_path.read_text()).get(strategy, {})
         trades = [
             Trade(t["pair"], t["open_date"], t["close_date"], t["profit_abs"])
             for t in s["trades"]
@@ -177,4 +184,8 @@ class LabEngine:
             trades=trades,
             export_zip=zpath,
             profit_mean=s.get("profit_mean") or 0.0,
+            sharpe=s.get("sharpe"),
+            timeframe=info.get("timeframe") or "",
+            start_ts=info.get("backtest_start_ts"),
+            end_ts=info.get("backtest_end_ts"),
         )

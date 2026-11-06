@@ -12,15 +12,18 @@ Three questions, each answered with a run rather than an argument:
 3. What is H3's five-year Sharpe worth after deflation by the 276+ trials
    actually on the ledger?
 
-All windows are spent research data (Plan §18.2); nothing clean is touched.
+All windows are spent research data (Plan §18.2); nothing clean is touched —
+and since the engine here is a RecordedEngine over the real holdout ledger,
+that claim is enforced, not asserted.
 """
 
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from factory.costs import WORKING
 from factory.engine.lab import LabEngine
-from factory.ledgers import trials
+from factory.engine.recorded import RecordedEngine
 from factory.orchestrator import manifest as mf
 from factory.stages.validate import ValidateSpec, run_validation
 from factory.validation import splitter
@@ -28,6 +31,7 @@ from factory.validation import splitter
 ROOT = Path(__file__).resolve().parents[1]
 WF = json.loads((ROOT / "lab" / "user_data" / "notebooks" / "walkforward.json").read_text())
 LEDGER = ROOT / "ledgers" / "trials.jsonl"
+HOLDOUT = ROOT / "ledgers" / "holdout.json"
 GOLDEN = json.loads((ROOT / "fixtures" / "golden" / "reference.json").read_text())
 
 # Autotrader Plan §15, "Control (defaults)" column — the recorded target.
@@ -43,7 +47,7 @@ def max_hold_days() -> int:
     return int(worst) + 1
 
 
-def boundary_exposure(engine: LabEngine, purge_days: int) -> list[dict]:
+def boundary_exposure(engine: RecordedEngine, purge_days: int) -> list[dict]:
     """Per original fold: trades in the IS window that OPEN inside the last
     `purge_days` before the IS/OOS boundary. Their labels are formed at the
     boundary, which is exactly what a hyperopt objective on this window was
@@ -52,10 +56,9 @@ def boundary_exposure(engine: LabEngine, purge_days: int) -> list[dict]:
     for f in WF["folds"]:
         is_range = f["is"]
         boundary = datetime.strptime(is_range.split("-")[1], "%Y%m%d").replace(tzinfo=timezone.utc)
-        r = engine.backtest("XSMomentum", "1d", is_range, 0.001)
-        trials.append(LEDGER, "backtest", "m4-rejudge",
-                      {"strategy": "XSMomentum", "timerange": is_range,
-                       "fee": 0.001, "why": "boundary exposure measurement"})
+        r = engine.backtest("XSMomentum", "1d", is_range, WORKING.fee_per_side,
+                            run_id="m4-rejudge",
+                            why="boundary exposure measurement")
         fmt = "%Y-%m-%d %H:%M:%S%z"
         in_zone = [t for t in r.trades
                    if (boundary - datetime.strptime(t.open_date, fmt)).days < purge_days]
@@ -71,7 +74,7 @@ def boundary_exposure(engine: LabEngine, purge_days: int) -> list[dict]:
 
 
 if __name__ == "__main__":
-    engine = LabEngine()
+    engine = RecordedEngine(LabEngine(), LEDGER, HOLDOUT)
     purge = max(30, max_hold_days())
     print(f"max hold in the golden run: {max_hold_days() - 1} days -> purge_days={purge}")
 
@@ -81,20 +84,18 @@ if __name__ == "__main__":
 
     run_dir = mf.new_run("M4 acceptance: re-judge H3 under the purged splitter", ROOT / "runs")
     m = mf.load(run_dir)
-    for s in ["S0", "S1", "S2", "S3", "S4"]:
-        m.stages[s] = {"status": "passed",
-                       "report": "method-validation rerun of a recorded result; not a new hypothesis"}
+    m.skip_to("S5", "method-validation rerun of a recorded result; not a new hypothesis")
     mf.save(run_dir, m)
 
     print("running S5 (7 OOS folds + 5-point cost sweep + full range + DSR)...")
     spec = ValidateSpec(
-        strategy="XSMomentum", timeframe="1d", fee=0.001, folds=folds,
+        strategy="XSMomentum", timeframe="1d", costs=WORKING, folds=folds,
         full_timerange="20210101-20260101",
         notes={"purge_days": purge,
                "why": "M4 acceptance; all windows already spent (Plan §18.2)"},
     )
     res = run_validation(engine, spec, run_dir, LEDGER)
-    d = json.loads((run_dir / "artifacts" / "dossier.json").read_text())
+    d = json.loads((run_dir / "artifacts" / mf.DOSSIER_JSON).read_text())
 
     print("measuring boundary exposure on the original IS windows...")
     exposure = boundary_exposure(engine, purge)

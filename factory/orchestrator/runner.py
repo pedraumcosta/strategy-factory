@@ -1,11 +1,12 @@
 """Deterministic pipeline runner. LLM judgment lives inside stages; this
 module only sequences, checks gates, and records. A stage is a callable
 `fn(run_dir, manifest) -> StageResult`; deterministic gates decide the
-transition and LLM output never self-certifies."""
+transition and LLM output never self-certifies. Stage-record transitions
+themselves live on the Manifest (the run module) — the runner never edits
+stage dicts by hand."""
 
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
@@ -29,6 +30,12 @@ class GateRefusal(RuntimeError):
     pass
 
 
+def _awaits_msg(stage: str) -> str:
+    gate = mf.STAGE_AWAITS.get(stage, "?")
+    return (f"{stage} finished and awaits human acknowledgement — review its "
+            f"artifacts, then: {mf.approve_command('<run>', gate)}")
+
+
 class Runner:
     def __init__(self, run_dir: Path, stages: dict[str, Callable]):
         self.run_dir = run_dir
@@ -42,23 +49,17 @@ class Runner:
         if s is None:
             return None
 
-        st = m.stages[s]
-        if st["status"] == "needs_human" and st.get("completed"):
+        if m.awaiting_human(s):
             # The stage finished its work and a human must act; re-running it
             # would loop forever (this exact spin cost 24 CPU-minutes once).
-            gate = mf.STAGE_AWAITS.get(s, "?")
-            raise GateRefusal(
-                f"{s} finished and awaits human acknowledgement — review its "
-                f"artifacts, then: factory approve <run> {gate}"
-            )
+            raise GateRefusal(_awaits_msg(s))
 
         gate = mf.HUMAN_GATES_BEFORE.get(s)
         if gate is not None:
             try:
                 verify(self.run_dir, gate)
             except ApprovalError as e:
-                m.stages[s]["status"] = "needs_human"
-                m.stages[s]["blocked_on"] = str(e)
+                m.block_on_gate(s, str(e))
                 mf.save(self.run_dir, m)
                 raise GateRefusal(f"{s} requires signed {gate}: {e}") from e
 
@@ -66,22 +67,15 @@ class Runner:
         if fn is None:
             raise GateRefusal(f"no implementation registered for stage {s}")
 
-        m.stages[s] = {"status": "running", "started_at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+        m.start(s)
         mf.save(self.run_dir, m)
         try:
             result = fn(self.run_dir, m)
         except Exception:
-            m.stages[s]["status"] = "pending"  # resumable
-            m.stages[s]["error_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+            m.record_error(s)  # resumable
             mf.save(self.run_dir, m)
             raise
-        m.stages[s].update(
-            status=result.status, report=result.report, data=result.data,
-            finished_at=time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-        )
-        if result.status == "needs_human":
-            m.stages[s]["completed"] = True  # work done; human must act
-        m.stages[s].pop("blocked_on", None)
+        m.finish(s, result.status, result.report, result.data)
         mf.save(self.run_dir, m)
         return s
 
@@ -100,13 +94,8 @@ class Runner:
             m = mf.load(self.run_dir)
             if m.is_killed():
                 return
-            st = m.stages[done]
-            if st["status"] == "needs_human" and st.get("completed"):
-                gate = mf.STAGE_AWAITS.get(done, "?")
-                raise GateRefusal(
-                    f"{done} finished and awaits human acknowledgement — "
-                    f"review its artifacts, then: factory approve <run> {gate}"
-                )
+            if m.awaiting_human(done):
+                raise GateRefusal(_awaits_msg(done))
 
 
 def replay_from(run_dir: Path, stage: str) -> list[str]:
@@ -119,8 +108,7 @@ def replay_from(run_dir: Path, stage: str) -> list[str]:
     reset = []
     for s in mf.STAGES[mf.STAGES.index(stage):]:
         if m.stages[s]["status"] != "pending":
-            m.stages[s] = {"status": "pending",
-                           "replayed_at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+            m.reset(s)
             reset.append(s)
     mf.save(run_dir, m)
     return reset
@@ -132,17 +120,14 @@ def reject(run_dir: Path, stage: str, reason: str) -> None:
     if not reason.strip():
         raise GateRefusal("a rejection must state its reasons")
     m = mf.load(run_dir)
-    st = m.stages[stage]
-    if not (st["status"] == "needs_human" and st.get("completed")):
+    if not m.awaiting_human(stage):
         raise GateRefusal(f"stage {stage} is not awaiting a human verdict "
-                          f"(status {st['status']!r})")
-    st["status"] = "killed"
-    st["report"] = f"rejected by human: {reason}"
-    st["rejected_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+                          f"(status {m.stages[stage]['status']!r})")
+    m.kill_by_human(stage, reason)
     mf.save(run_dir, m)
 
 
-def acknowledge(run_dir: Path, stage: str, ) -> None:
+def acknowledge(run_dir: Path, stage: str) -> None:
     """Clear a completed needs_human stage after its gate was signed.
     Verifies the signature (and that the reviewed artifacts are unchanged)
     before marking the stage passed — the human action IS the transition."""
@@ -150,12 +135,9 @@ def acknowledge(run_dir: Path, stage: str, ) -> None:
     if gate is None:
         raise GateRefusal(f"stage {stage} does not await a human gate")
     m = mf.load(run_dir)
-    st = m.stages[stage]
-    if not (st["status"] == "needs_human" and st.get("completed")):
+    if not m.awaiting_human(stage):
         raise GateRefusal(f"stage {stage} is not awaiting acknowledgement "
-                          f"(status {st['status']!r})")
+                          f"(status {m.stages[stage]['status']!r})")
     verify(run_dir, gate)  # raises unless signed and untampered
-    st["status"] = "passed"
-    st["acknowledged_by"] = gate
-    st["acknowledged_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    m.acknowledge(stage, gate)
     mf.save(run_dir, m)

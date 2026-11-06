@@ -1,29 +1,36 @@
 """S5 — the validation stage: the full gauntlet on in-sample folds.
 
 Deterministic by design: purged walk-forward OOS runs, a cost sweep with
-the zero-fee sanity and cost-coverage gates, and a deflated Sharpe whose
-trial count comes from the ledger. Emits a dossier (json + md) and, when
-papermill is available, executes the review notebook that is HG2's
-reviewing surface. The stage never passes a run outright: the best it
-returns is needs_human — HG2 is a judgment, not a checkbox.
+the zero-fee sanity and cost-coverage gates (the cost model carries the
+card's turnover — a tilt is charged what it transacts at S5 exactly as at
+S2), and a deflated Sharpe whose trial count comes from the ledger. Emits
+a dossier (json + md) and, when papermill is available, executes the
+review notebook that is HG2's reviewing surface. The stage never passes a
+run outright: the best it returns is needs_human — HG2 is a judgment, not
+a checkbox.
+
+The engine here is a RecordedEngine: every backtest it runs is already a
+trial on the ledger, so this stage appends nothing by hand. DSR, the tear
+sheet and G-passive are all computed from ONE parse of the full-range
+export (gpassive.curves_from_export: the daily mark-to-market curve), so
+they cannot drift onto different return series. A failure computing them
+raises — the runner marks the stage resumable; an uncomputable dossier
+section is a factory defect, not a footnote.
 """
 
 from __future__ import annotations
 
-import io
 import json
-import math
-import statistics
-import zipfile
 from collections import defaultdict
 from datetime import datetime
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from factory.costs import WORKING, CostModel
 from factory.gates import core
-from factory.ledgers import trials
+from factory.orchestrator import manifest as mf
 from factory.orchestrator.runner import StageResult
-from factory.validation import dsr as dsr_mod
+from factory.validation import deflation
 from factory.validation.splitter import Fold
 
 
@@ -31,52 +38,35 @@ from factory.validation.splitter import Fold
 class ValidateSpec:
     strategy: str
     timeframe: str
-    fee: float
     folds: list[Fold]
     full_timerange: str
-    cost_fees: tuple = (0.0, 0.0005, 0.001, 0.002, 0.003)
+    costs: CostModel = WORKING
+    turnover_per_trade: float = 1.0  # from the card — Plan §17.10
     strategy_path: Path | None = None
     periods_per_year: int = 365
     notes: dict = field(default_factory=dict)
 
-
-def daily_returns_from_export(export_zip: Path, strategy: str) -> list[float]:
-    """The export bundles a true daily mark-to-market equity curve
-    (*_wallet.feather — found in Plan §23). Daily returns from it."""
-    import pandas as pd  # heavy import kept local
-
-    with zipfile.ZipFile(export_zip) as z:
-        name = export_zip.name.replace(".zip", f"_{strategy}_wallet.feather")
-        df = pd.read_feather(io.BytesIO(z.read(name)))
-    # long format: one row per (date, currency); equity = total_quote summed
-    eq = df.groupby("date")["total_quote"].sum().sort_index()
-    rets = eq.pct_change().dropna()
-    return rets[rets.abs() < float("inf")].tolist()
+    @property
+    def fee(self) -> float:
+        return self.costs.fee_per_side
 
 
 def run_validation(engine, spec: ValidateSpec, run_dir: Path,
                    trial_ledger: Path) -> StageResult:
-    art = run_dir / "artifacts"
-    art.mkdir(exist_ok=True)
+    art = mf.artifacts_dir(run_dir)
     dossier: dict = {"spec": {
         "strategy": spec.strategy, "timeframe": spec.timeframe, "fee": spec.fee,
+        "turnover_per_trade": spec.turnover_per_trade,
         "folds": [{"n": f.n, "train": f.train_timerange(), "test": f.test_timerange(),
                    "purge_gap_days": f.purge_gap_days} for f in spec.folds],
         "full_timerange": spec.full_timerange, **spec.notes,
     }}
 
     def bt(timerange: str, fee: float, why: str):
-        r = engine.backtest(
+        return engine.backtest(
             spec.strategy, spec.timeframe, timerange, fee,
-            strategy_path=spec.strategy_path,
+            run_id=run_dir.name, why=why, strategy_path=spec.strategy_path,
         )
-        trials.append(trial_ledger, "backtest", run_dir.name, {
-            "strategy": spec.strategy, "timerange": timerange,
-            "fee": fee, "why": why,
-            "trades": r.trade_count, "profit_total": r.profit_total,
-            "profit_mean": r.profit_mean,
-        })
-        return r
 
     # 1 — purged walk-forward OOS
     folds_out = []
@@ -93,7 +83,7 @@ def run_validation(engine, spec: ValidateSpec, run_dir: Path,
 
     # 2 — cost sweep incl. zero fee
     sweep = []
-    for fee in spec.cost_fees:
+    for fee in spec.costs.sweep_fees:
         r = bt(spec.full_timerange, fee, "cost sweep")
         sweep.append({"fee": fee, "trades": r.trade_count,
                       "profit_total": r.profit_total,
@@ -101,55 +91,30 @@ def run_validation(engine, spec: ValidateSpec, run_dir: Path,
                       "mean_per_trade": r.profit_mean})
     dossier["cost_sweep"] = sweep
     zero = next(s for s in sweep if s["fee"] == 0.0)
-    gates = [core.zero_fee_sanity(zero["profit_total"])]
-    roundtrip = 2 * spec.fee
-    gates.append(core.cost_coverage(zero["mean_per_trade"], roundtrip))
+    gates = [
+        core.zero_fee_sanity(zero["profit_total"]),
+        spec.costs.coverage(zero["mean_per_trade"],
+                            turnover_per_trade=spec.turnover_per_trade),
+    ]
 
-    # 3 — deflated Sharpe from the full-range run at the working fee
+    # 3 — full-range run at the working fee: ONE export parse feeds DSR,
+    # the tear sheet and G-passive the same daily mark-to-market series
     full = bt(spec.full_timerange, spec.fee, "full range")
     dossier["full_range"] = {"trades": full.trade_count,
                              "profit_total": full.profit_total,
                              **trade_shape(full.trades)}
-    try:
-        rets = daily_returns_from_export(full.export_zip, spec.strategy)
-        sr_ann = dsr_mod.sharpe(rets, spec.periods_per_year)
-        skew, kurt = dsr_mod.moments(rets)
-        # Deflation family: trials on a comparable basis only — same
-        # timeframe, window >= 300d, finite recorded Sharpe. Mixing 1h
-        # hyperopt spam (sentinel values to -100) into the variance would
-        # make SR0 meaningless. Both counts are reported.
-        family = _historic_sharpes(trial_ledger, timeframe=spec.timeframe,
-                                   min_days=300)
-        n_ledger = trials.count(trial_ledger)
-        sr_var = (statistics.variance(family) / spec.periods_per_year
-                  if len(family) >= 2 else 0.01 / spec.periods_per_year)
-        d = dsr_mod.dsr(sr=sr_ann / math.sqrt(spec.periods_per_year),
-                        n_obs=len(rets), n_trials=max(len(family), 2),
-                        sr_var=sr_var, skew=skew, kurt=kurt)
-        d["sr_annualized"] = sr_ann
-        d["n_ledger_total"] = n_ledger
-        d["note"] = (f"deflated within the comparable-basis family "
-                     f"({len(family)} trials, {spec.timeframe}, >=300d); the "
-                     f"full ledger holds {n_ledger} trials and hyperopt "
-                     f"epochs are uncounted, so the true search was wider — "
-                     f"treat DSR as an upper bound")
-        dossier["deflated_sharpe"] = d
-    except Exception as e:
-        dossier["deflated_sharpe"] = {"error": f"unavailable: {e}"}
+    from factory.validation import gpassive
+    curves = gpassive.curves_from_export(full.export_zip, spec.strategy)
+    dossier["deflated_sharpe"] = deflation.deflate(
+        curves.rets.tolist(), trial_ledger, spec.timeframe,
+        spec.periods_per_year)
 
-    # 4 — tear sheet + G-passive (§22/§23) from the same full-range export.
-    # Separate try from DSR: one failing must not drop the other.
-    try:
-        from factory.validation import gpassive
-        curves = gpassive.curves_from_export(full.export_zip, spec.strategy)
-        tear, gp = gpassive.judge(curves, spec.periods_per_year)
-        if gpassive.render_png(curves, spec.strategy, art / "tearsheet.png"):
-            tear["figure"] = "tearsheet.png"
-        dossier["tear_sheet"] = tear
-        dossier["g_passive"] = gp
-    except Exception as e:
-        dossier["tear_sheet"] = {"error": f"unavailable: {e}"}
-        dossier["g_passive"] = {"error": f"unavailable: {e}"}
+    # 4 — tear sheet + G-passive (§22/§23) from the same curves
+    tear, gp = gpassive.judge(curves, spec.periods_per_year)
+    if gpassive.render_png(curves, spec.strategy, art / mf.TEARSHEET_PNG):
+        tear["figure"] = mf.TEARSHEET_PNG
+    dossier["tear_sheet"] = tear
+    dossier["g_passive"] = gp
 
     dossier["gates"] = [
         {"gate": g.gate, "passed": g.passed, "reason": g.reason, "numbers": g.numbers}
@@ -157,17 +122,17 @@ def run_validation(engine, spec: ValidateSpec, run_dir: Path,
     ]
     killed = [g for g in gates if not g.passed]
 
-    (art / "dossier.json").write_text(json.dumps(dossier, indent=1))
-    (art / "dossier.md").write_text(_render_md(dossier))
+    (art / mf.DOSSIER_JSON).write_text(json.dumps(dossier, indent=1))
+    (art / mf.DOSSIER_MD).write_text(_render_md(dossier))
     _execute_notebook(run_dir)
 
     if killed:
         return StageResult("killed",
                            "; ".join(f"{g.gate}: {g.reason}" for g in killed),
-                           {"dossier": "artifacts/dossier.json"})
+                           {"dossier": f"artifacts/{mf.DOSSIER_JSON}"})
     return StageResult("needs_human",
                        "all deterministic gates passed — HG2 review required",
-                       {"dossier": "artifacts/dossier.json"})
+                       {"dossier": f"artifacts/{mf.DOSSIER_JSON}"})
 
 
 def trade_shape(trades) -> dict:
@@ -193,28 +158,6 @@ def trade_shape(trades) -> dict:
     return {"max_hold_days": round(max_hold, 1),
             "best_month": best_month,
             "best_month_share": None if share is None else round(share, 3)}
-
-
-def _historic_sharpes(ledger: Path, timeframe: str | None = None,
-                      min_days: int = 0) -> list[float]:
-    out = []
-    if not ledger.exists():
-        return out
-    with open(ledger) as f:
-        for line in f:
-            r = json.loads(line)
-            v = r.get("sharpe")
-            if not isinstance(v, (int, float)) or abs(v) > 50:
-                continue  # missing or sentinel
-            if timeframe is not None and r.get("timeframe") != timeframe:
-                continue
-            if min_days and not (
-                r.get("start_ts") and r.get("end_ts")
-                and (r["end_ts"] - r["start_ts"]) >= min_days * 86400
-            ):
-                continue
-            out.append(float(v))
-    return out
 
 
 def _render_md(d: dict) -> str:
