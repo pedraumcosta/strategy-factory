@@ -106,13 +106,20 @@ def run_agent(prompt: str, cwd: Path, allowed_tools: list[str],
 
     async def _run() -> dict:
         out: dict = {"result": "", "cost_usd": None, "num_turns": None,
-                     "model": MODEL, "duration_s": None}
+                     "model": MODEL, "duration_s": None, "usage": None}
         t0 = time.perf_counter()
         async for message in query(prompt=prompt, options=options):
             if isinstance(message, ResultMessage):
                 out["result"] = message.result or ""
                 out["cost_usd"] = getattr(message, "total_cost_usd", None)
                 out["num_turns"] = getattr(message, "num_turns", None)
+                u = getattr(message, "usage", None) or {}
+                # The four components a cost decision needs (Plan §17 topic 3:
+                # output 45% / cache writes 36% / cache reads 19% / uncached ~0
+                # had to be excavated from transcripts; now the ledger knows).
+                out["usage"] = {k: u.get(k) for k in (
+                    "input_tokens", "output_tokens",
+                    "cache_read_input_tokens", "cache_creation_input_tokens")}
         out["duration_s"] = round(time.perf_counter() - t0, 2)
         return out
 
