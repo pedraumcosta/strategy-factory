@@ -151,6 +151,101 @@ def cmd_factor_screen(args) -> None:
     print(f"\nCSV: {res['csv']}")
 
 
+def cmd_scenarios(args) -> None:
+    """S1 scenario retrieval (Plan §17 topic 5): the k nearest historical
+    analogues of the trailing window, and what followed them. Every query
+    is a trial on the ledger — retrieved analogues are a multiple-
+    comparisons machine with extra steps (§1.2)."""
+    import numpy as np
+    from factory import similarity as sim
+    from factory.ledgers import holdout, trials
+    from factory.screens.screen import load_panels
+
+    horizons = [int(h) for h in args.horizons.split(",")]
+    panels = load_panels(Path(args.data_dir).expanduser(), [args.symbol],
+                         args.timeframe, hard_stop=None)
+    close = panels["close"][args.symbol].dropna()
+    x = np.log(close.to_numpy())
+    dates = [d.strftime("%Y%m%d") for d in close.index]
+    spans = sim.forbidden_spans(holdout.windows(HOLDOUT))
+    if sim.overlaps(dates[-args.window], dates[-1], spans):
+        sys.exit("the query window itself overlaps a clean/accruing holdout "
+                 "range — not readable without HG2b")
+    picks = sim.analogues(x, dates, args.window, args.k, horizons, spans)
+    rates = sim.base_rates(picks, horizons)
+
+    print(f"# {args.symbol} — {args.k} nearest analogues of the last "
+          f"{args.window} bars ({args.timeframe}, as of {dates[-1]})\n")
+    for p in picks:
+        fwd = "  ".join(f"{h}d {p['fwd_log_return'][h]:+.2%}"
+                        if np.isfinite(p["fwd_log_return"][h])
+                        else f"{h}d (blocked/na)" for h in horizons)
+        print(f"  {p['start']}-{p['end']}  dist {p['distance']:5.2f}   {fwd}")
+    print("\nbase rates (forward log returns of the analogues):")
+    for h, r in rates.items():
+        if r["n"]:
+            print(f"  {h:>3}d: n={r['n']}  mean {r['mean']:+.2%}  "
+                  f"median {r['median']:+.2%}  up {r['frac_up']:.0%}")
+        else:
+            print(f"  {h:>3}d: no readable forward windows")
+    print("\nBase rates are context for S1, not a signal: analogue counts "
+          "this small resolve nothing (Plan §21).")
+    trials.append(LEDGER, "scenario_query", "adhoc",
+                  {"symbol": args.symbol, "timeframe": args.timeframe,
+                   "window": args.window, "k": args.k, "asof": dates[-1],
+                   "horizons": horizons,
+                   "analogues": [{"start": p["start"], "end": p["end"],
+                                  "distance": round(p["distance"], 3)}
+                                 for p in picks]})
+
+
+def cmd_novelty(args) -> None:
+    """S7 novelty calibration (Plan §17 topic 5): how unprecedented is each
+    pair's latest window, on the distribution of that same statistic over
+    its own history. A calibration report, deliberately NOT a pager — the
+    §17.2 rule: thresholds are chosen by a human from this report before
+    anything pages on them."""
+    import numpy as np
+    from factory import similarity as sim
+    from factory.ledgers import holdout
+    from factory.screens.screen import load_panels
+
+    symbols = (args.universe.split(",") if args.universe else
+               ["ADA", "ALGO", "AVAX", "BNB", "BTC", "DOGE", "ETH", "HBAR",
+                "LINK", "LTC", "NEAR", "SOL", "TRX", "UNI", "XLM", "XRP", "ZEC"])
+    panels = load_panels(Path(args.data_dir).expanduser(), symbols,
+                         args.timeframe, hard_stop=None)
+    spans = sim.forbidden_spans(holdout.windows(HOLDOUT))
+    m = args.window
+    print(f"# Novelty — nearest-neighbour distance of the last {m}-bar "
+          f"window ({args.timeframe}); clean/accruing holdout windows "
+          f"excluded from memory and evaluation\n")
+    print(f"{'pair':>6} {'latest':>7} {'pctile':>7} {'p99':>6}  "
+          f"{'days>p99 (history)':>18}")
+    for sym in symbols:
+        close = panels["close"][sym].dropna()
+        x = np.log(close.to_numpy())
+        dates = [d.strftime("%Y%m%d") for d in close.index]
+        starts = range(len(x) - m + 1)
+        allowed = np.array([not sim.overlaps(dates[s], dates[s + m - 1], spans)
+                            for s in starts])
+        nov = sim.novelty_series(x, m, allowed)
+        finite = nov[np.isfinite(nov)]
+        if not finite.size or not np.isfinite(nov[-1]):
+            print(f"{sym:>6}  (latest window not evaluable)")
+            continue
+        last = nov[-1]
+        pct = (finite <= last).mean()
+        p99 = float(np.quantile(finite, 0.99))
+        print(f"{sym:>6} {last:7.2f} {pct:7.1%} {p99:6.2f}  "
+              f"{int((finite > p99).sum()):>18}")
+    print("\nReading: a latest value above its own p99 says today's shape "
+          "has almost no precedent in the readable history. Alarm "
+          "thresholds are picked by a human from these distributions "
+          "(and the COVID crash sits inside the CLEAN window — this "
+          "calibration deliberately cannot see it).")
+
+
 def cmd_ledger(args) -> None:
     if not LEDGER.exists():
         print("empty ledger")
@@ -192,6 +287,20 @@ def main() -> None:
     s.add_argument("--data-dir", default="~/freqtrade-data")
     s.add_argument("--out", default="")
     s.set_defaults(fn=cmd_factor_screen)
+    s = sub.add_parser("scenarios"); s.add_argument("symbol")
+    s.add_argument("--window", type=int, default=60)
+    s.add_argument("--k", type=int, default=8)
+    s.add_argument("--horizons", default="7,21")
+    s.add_argument("--timeframe", default="1d")
+    s.add_argument("--data-dir", default="~/freqtrade-data")
+    s.set_defaults(fn=cmd_scenarios)
+    s = sub.add_parser("novelty")
+    s.add_argument("--window", type=int, default=30)
+    s.add_argument("--universe", default="",
+                   help="comma-separated symbols; default = the 17-pair universe")
+    s.add_argument("--timeframe", default="1d")
+    s.add_argument("--data-dir", default="~/freqtrade-data")
+    s.set_defaults(fn=cmd_novelty)
     s = sub.add_parser("dryrun-review"); s.add_argument("data_dir")
     s.set_defaults(fn=cmd_dryrun_review)
     s = sub.add_parser("reject"); s.add_argument("run_id")
