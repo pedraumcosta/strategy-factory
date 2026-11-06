@@ -284,3 +284,24 @@ def test_llm_log_carries_model_and_latency():
                              "model": "claude-opus-5-5", "duration_s": 12.3})
         assert rec["model"] == "claude-opus-5-5"
         assert rec["duration_s"] == 12.3
+
+
+def test_llm_log_carries_usage_when_present(tmp_path):
+    """Topic 3's lesson: the token profile (output vs cache writes vs reads)
+    had to be excavated from transcripts; now any cost decision is a ledger
+    query. Records without usage stay byte-compatible (no key at all)."""
+    from factory.stages.pipeline import _log_llm
+
+    class FakeRunDir:
+        name = "fake-run"
+
+    ledger = tmp_path / "trials.jsonl"
+    usage = {"input_tokens": 12, "output_tokens": 31000,
+             "cache_read_input_tokens": 900000,
+             "cache_creation_input_tokens": 90000}
+    _log_llm(ledger, FakeRunDir(), "S1",
+             {"cost_usd": 2.1, "model": "claude-opus-5-5", "usage": usage})
+    _log_llm(ledger, FakeRunDir(), "S0", {"cost_usd": 0.8, "usage": None})
+    recs = [json.loads(l) for l in ledger.read_text().splitlines()]
+    assert recs[0]["usage"] == usage
+    assert "usage" not in recs[1]

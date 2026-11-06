@@ -329,15 +329,35 @@ def cmd_ledger(args) -> None:
         return
     kinds: dict[str, int] = {}
     spend = 0.0
+    profile: dict[str, dict] = {}   # stage -> token component sums
     for line in open(LEDGER):
         r = json.loads(line)
         kinds[r["kind"]] = kinds.get(r["kind"], 0) + 1
         if isinstance(r.get("cost_usd"), (int, float)):
             spend += r["cost_usd"]
+        if r["kind"] == "llm" and isinstance(r.get("usage"), dict):
+            p = profile.setdefault(r.get("stage", "?"),
+                                   {"calls": 0, "cost_usd": 0.0})
+            p["calls"] += 1
+            p["cost_usd"] += r.get("cost_usd") or 0.0
+            for k, v in r["usage"].items():
+                if isinstance(v, (int, float)):
+                    p[k] = p.get(k, 0) + v
     for k, n in sorted(kinds.items()):
         print(f"{k}: {n}")
     print(f"total trials: {sum(kinds.values())}")
     print(f"LLM spend on ledger: ${spend:.2f} (budget $100/month)")
+    if profile:
+        print("\ntoken profile (llm records carrying usage):")
+        print(f"{'stage':8} {'calls':>5} {'out':>10} {'cache_w':>10} "
+              f"{'cache_r':>11} {'input':>7} {'$':>8}")
+        for stage, p in sorted(profile.items()):
+            print(f"{stage:8} {p['calls']:>5} "
+                  f"{p.get('output_tokens', 0):>10,} "
+                  f"{p.get('cache_creation_input_tokens', 0):>10,} "
+                  f"{p.get('cache_read_input_tokens', 0):>11,} "
+                  f"{p.get('input_tokens', 0):>7,} "
+                  f"{p['cost_usd']:>8.2f}")
 
 
 def main() -> None:

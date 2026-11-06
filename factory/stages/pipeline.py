@@ -54,11 +54,13 @@ FORBIDDEN_IN_POPULATE = [
 
 
 def _log_llm(ledger: Path, run_dir: Path, stage: str, out: dict) -> None:
-    trials.append(ledger, "llm", run_dir.name,
-                  {"stage": stage, "cost_usd": out.get("cost_usd"),
-                   "num_turns": out.get("num_turns"),
-                   "model": out.get("model"),
-                   "duration_s": out.get("duration_s")})
+    rec = {"stage": stage, "cost_usd": out.get("cost_usd"),
+           "num_turns": out.get("num_turns"),
+           "model": out.get("model"),
+           "duration_s": out.get("duration_s")}
+    if out.get("usage"):
+        rec["usage"] = out["usage"]
+    trials.append(ledger, "llm", run_dir.name, rec)
 
 
 # --- S0 intake --------------------------------------------------------------
