@@ -5,6 +5,9 @@
     factory approve <run-id> <gate>       sign a human gate (hg1|hg2|hg2b|hg3)
     factory status [<run-id>]             show runs / one run's stages
     factory ledger                        trial counts + LLM spend
+
+The stage sequence, the gate topology and what each gate signs over live in
+factory/orchestrator/manifest.py (the run module); this file only relays.
 """
 
 from __future__ import annotations
@@ -14,17 +17,12 @@ import json
 import sys
 from pathlib import Path
 
+from factory.orchestrator import manifest as mf
+
 ROOT = Path(__file__).resolve().parents[1]
 RUNS = ROOT / "runs"
 LEDGER = ROOT / "ledgers" / "trials.jsonl"
-
-# What each gate signs over: the artifacts the human is certifying they read.
-GATE_ARTIFACTS = {
-    "hg1": ["prereg.md", "hypothesis.json", "screen_report.md"],
-    "hg2": ["dossier.json", "dossier.md", "tearsheet.png"],
-    "hg2b": ["dossier.json", "prereg.md"],
-    "hg3": ["dossier.json"],
-}
+HOLDOUT = ROOT / "ledgers" / "holdout.json"
 
 
 def _run_dir(run_id: str) -> Path:
@@ -35,20 +33,19 @@ def _run_dir(run_id: str) -> Path:
 
 
 def cmd_new(args) -> None:
-    from factory.orchestrator import manifest as mf
     run_dir = mf.new_run(args.idea, RUNS)
     print(run_dir.name)
 
 
 def cmd_run(args) -> None:
     from factory.engine.lab import LabEngine
-    from factory.orchestrator import manifest as mf
     from factory.orchestrator.runner import GateRefusal, Runner
     from factory.stages.pipeline import build_stages
     import time
 
     run_dir = _run_dir(args.run_id)
-    stages = build_stages(LabEngine(), LEDGER, today=time.strftime("%Y-%m-%d"))
+    stages = build_stages(LabEngine(), LEDGER, today=time.strftime("%Y-%m-%d"),
+                          holdout_ledger=HOLDOUT)
     runner = Runner(run_dir, stages)
     try:
         runner.run_to(args.to)
@@ -63,14 +60,16 @@ def cmd_run(args) -> None:
 def cmd_approve(args) -> None:
     from factory.orchestrator import approvals
     run_dir = _run_dir(args.run_id)
-    art = run_dir / "artifacts"
-    files = [art / f for f in GATE_ARTIFACTS[args.gate] if (art / f).exists()]
-    if not files:
-        sys.exit(f"nothing to sign: none of {GATE_ARTIFACTS[args.gate]} exist yet")
+    try:
+        files, missing_optional = mf.gate_artifact_paths(run_dir, args.gate)
+    except mf.GateArtifactError as e:
+        sys.exit(str(e))
+    for name in missing_optional:
+        print(f"note: optional artifact {name} is missing — "
+              f"{args.gate} signs without it")
     out = approvals.sign(run_dir, args.gate, files, notes=args.notes or "")
     print(f"signed {args.gate} over {[f.name for f in files]} -> {out}")
     # if a completed stage was waiting on this gate, the signature clears it
-    from factory.orchestrator import manifest as mf
     from factory.orchestrator.runner import GateRefusal, acknowledge
     for stage, gate in mf.STAGE_AWAITS.items():
         if gate == args.gate:
@@ -82,7 +81,6 @@ def cmd_approve(args) -> None:
 
 
 def cmd_status(args) -> None:
-    from factory.orchestrator import manifest as mf
     if args.run_id:
         m = mf.load(_run_dir(args.run_id))
         print(m.prompt)
@@ -122,8 +120,7 @@ def cmd_dryrun_review(args) -> None:
     md = review.render(r)
     (data_dir / "review.md").write_text(md)
     # the passage of observed time is also holdout accruing on the ledger
-    w = holdout.accrue(ROOT / "ledgers" / "holdout.json",
-                       time.strftime("%Y%m%d"))
+    w = holdout.accrue(HOLDOUT, time.strftime("%Y%m%d"))
     print(md)
     print(f"[holdout] accruing window {w['range']}: {w['days']}d, "
           f"status {w['status']} (matures at {holdout.MATURITY_DAYS}d)")
@@ -144,10 +141,12 @@ def cmd_factor_screen(args) -> None:
                       timeframe=args.timeframe)
     out_dir = Path(args.out) if args.out else ROOT / "runs" / "adhoc-screens" / args.name
     res = run_screen(spec, Path(args.data_dir).expanduser(), out_dir)
+    cand = res["verdicts"][args.name]
     trials.append(LEDGER, "factor_screen", "adhoc",
                   {"factor": args.name, "expr": args.expr,
-                   "passed": res["verdicts"][args.name].passed,
-                   "calibration_valid": res["valid"]})
+                   "passed": cand.passed,
+                   "calibration_valid": res["valid"],
+                   "ic": {str(h): v for h, v in cand.ic_by_horizon.items()}})
     print(res["report"])
     print(f"\nCSV: {res['csv']}")
 
@@ -176,10 +175,10 @@ def main() -> None:
 
     s = sub.add_parser("new"); s.add_argument("idea"); s.set_defaults(fn=cmd_new)
     s = sub.add_parser("run"); s.add_argument("run_id")
-    s.add_argument("--to", default="S5", choices=["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7"])
+    s.add_argument("--to", default="S5", choices=mf.STAGES)
     s.set_defaults(fn=cmd_run)
     s = sub.add_parser("approve"); s.add_argument("run_id")
-    s.add_argument("gate", choices=sorted(GATE_ARTIFACTS))
+    s.add_argument("gate", choices=sorted(mf.GATE_ARTIFACTS))
     s.add_argument("--notes", default="")
     s.set_defaults(fn=cmd_approve)
     s = sub.add_parser("status"); s.add_argument("run_id", nargs="?")
@@ -196,12 +195,11 @@ def main() -> None:
     s = sub.add_parser("dryrun-review"); s.add_argument("data_dir")
     s.set_defaults(fn=cmd_dryrun_review)
     s = sub.add_parser("reject"); s.add_argument("run_id")
-    s.add_argument("stage", choices=["S3", "S5"])
+    s.add_argument("stage", choices=sorted(mf.STAGE_AWAITS))
     s.add_argument("--notes", required=True)
     s.set_defaults(fn=cmd_reject)
     s = sub.add_parser("replay"); s.add_argument("run_id")
-    s.add_argument("--from", dest="from_stage", required=True,
-                   choices=["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7"])
+    s.add_argument("--from", dest="from_stage", required=True, choices=mf.STAGES)
     s.set_defaults(fn=cmd_replay)
 
     args = p.parse_args()

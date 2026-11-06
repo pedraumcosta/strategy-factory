@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from factory.engine.lab import BacktestResult
+from factory.engine.recorded import RecordedEngine
 from factory.orchestrator import approvals, manifest as mf
 from factory.orchestrator.runner import GateRefusal, Runner, acknowledge
 from factory.stages import pipeline
@@ -83,8 +84,9 @@ def stages_for(tmp_path, card=CARD, strategy_src=STRATEGY_OK):
         "S2": pipeline.screen_stage(),
         "S3": pipeline.prereg_stage(fake_agent_writing({
             "prereg.md": PREREG_MD}), ledger),
-        "S4": pipeline.implement_stage(SmokeEngine(), ledger, fake_agent_writing({
-            f"{card['name']}.py": strategy_src})),
+        "S4": pipeline.implement_stage(
+            RecordedEngine(SmokeEngine(), ledger), ledger,
+            fake_agent_writing({f"{card['name']}.py": strategy_src})),
     }, ledger
 
 

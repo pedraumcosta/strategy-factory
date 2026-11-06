@@ -1,6 +1,11 @@
 """The staged pipeline: S0 intake, S1 research, S2 screen, S3 pre-register,
 S4 implement, S5 validate — wired for the Runner.
 
+This module is wiring: the card schema lives in factory/card.py, the S2
+policy in factory/screens/policy.py, the cost model in factory/costs.py,
+and every engine the stages see is a RecordedEngine (every backtest is a
+trial; holdout windows are refused at the seam).
+
 Every LLM stage has the same shape: the agent writes artifact files, a
 deterministic validator judges them (the agent never self-certifies), and
 the agent call itself is appended to the trial ledger with its dollar cost
@@ -15,21 +20,18 @@ import json
 import re
 from pathlib import Path
 
-from factory.gates import core
+from factory import card as card_mod
+from factory.costs import WORKING
+from factory.engine.recorded import RecordedEngine
 from factory.ledgers import trials
+from factory.orchestrator import manifest as mf
 from factory.orchestrator.runner import StageResult
+from factory.screens import policy
 from factory.stages import llm
 from factory.stages.validate import ValidateSpec, run_validation
 from factory.validation import splitter
 
 ROOT = Path(__file__).resolve().parents[2]
-TIMEFRAMES = {"1d", "4h", "1h"}
-ROUNDTRIP = 0.002  # 0.1%/side, the working fee basis
-REQUIRED_CARD_FIELDS = [
-    "name", "premise", "edge_source", "cross_sectional", "universe",
-    "timeframe", "holding_period_days", "estimates", "estimates_basis",
-    "parameters", "provenance",
-]
 # Source patterns that killed real strategies via lookahead; S4 refuses them.
 FORBIDDEN = [
     (r"shift\(\s*-", "negative shift reads the future"),
@@ -48,61 +50,32 @@ FORBIDDEN_IN_POPULATE = [
 ]
 
 
-def _art(run_dir: Path) -> Path:
-    a = run_dir / "artifacts"
-    a.mkdir(exist_ok=True)
-    return a
-
-
 def _log_llm(ledger: Path, run_dir: Path, stage: str, out: dict) -> None:
     trials.append(ledger, "llm", run_dir.name,
                   {"stage": stage, "cost_usd": out.get("cost_usd"),
                    "num_turns": out.get("num_turns")})
 
 
-def load_card(run_dir: Path) -> dict:
-    return json.loads((_art(run_dir) / "hypothesis.json").read_text())
-
-
 # --- S0 intake --------------------------------------------------------------
-
-def validate_card(card: dict) -> list[str]:
-    problems = [f"missing field {k!r}" for k in REQUIRED_CARD_FIELDS if k not in card]
-    if problems:
-        return problems
-    if not str(card["name"]).isidentifier():
-        problems.append(f"name {card['name']!r} is not a valid class name")
-    if card["timeframe"] not in TIMEFRAMES:
-        problems.append(f"timeframe {card['timeframe']!r} not in {sorted(TIMEFRAMES)}")
-    if not (isinstance(card["universe"], list) and 0 < len(card["universe"]) <= 17):
-        problems.append("universe must be a list of 1-17 pairs")
-    est = card.get("estimates", {})
-    for k in ("gross_edge_per_trade", "per_trade_sd", "trades_available"):
-        if not isinstance(est.get(k), (int, float)):
-            problems.append(f"estimates.{k} must be a number")
-    if not (isinstance(card["parameters"], dict) and card["parameters"]):
-        problems.append("parameters must be a non-empty dict of a-priori values")
-    return problems
-
 
 def intake_stage(agent_fn=None, ledger: Path | None = None):
     agent_fn = agent_fn or llm.run_agent
 
     def stage(run_dir, manifest) -> StageResult:
-        art = _art(run_dir)
+        art = mf.artifacts_dir(run_dir)
         out = agent_fn(prompt=llm.load_prompt("intake", idea=manifest.prompt),
                        cwd=art, allowed_tools=["Write", "Read"])
         if ledger:
             _log_llm(ledger, run_dir, "S0", out)
         try:
-            card = load_card(run_dir)
+            card = card_mod.load(run_dir)
         except Exception as e:
             return StageResult("killed", f"intake produced no readable card: {e}")
-        problems = validate_card(card)
+        problems = card_mod.validate(card)
         if problems:
             return StageResult("killed", "invalid hypothesis card: " + "; ".join(problems))
-        if not (art / "hypothesis.md").exists():
-            return StageResult("killed", "hypothesis.md missing")
+        if not (art / mf.CARD_MD).exists():
+            return StageResult("killed", f"{mf.CARD_MD} missing")
         return StageResult("passed", f"card for {card['name']}", {"name": card["name"]})
 
     return stage
@@ -120,7 +93,7 @@ def research_stage(agent_fn=None, ledger: Path | None = None,
     lib = library_dir or (ROOT.parent.parent / "Library")
 
     def stage(run_dir, manifest) -> StageResult:
-        art = _art(run_dir)
+        art = mf.artifacts_dir(run_dir)
         out = agent_fn(
             prompt=llm.load_prompt("research", library_dir=lib),
             cwd=art,
@@ -128,9 +101,9 @@ def research_stage(agent_fn=None, ledger: Path | None = None,
         )
         if ledger:
             _log_llm(ledger, run_dir, "S1", out)
-        f = art / "research.md"
+        f = art / mf.RESEARCH_MD
         if not f.exists():
-            return StageResult("killed", "research.md missing")
+            return StageResult("killed", f"{mf.RESEARCH_MD} missing")
         text = f.read_text()
         missing = [s for s in RESEARCH_SECTIONS if s not in text]
         if missing:
@@ -144,89 +117,26 @@ def research_stage(agent_fn=None, ledger: Path | None = None,
 
 # --- S2 screen (deterministic) ----------------------------------------------
 
-def screen_stage(data_dir: Path | None = None, trial_ledger: Path | None = None):
-    """S2. Estimate screens always; for a cross-sectional card with price
-    data available, ALSO the measured factor screen (Plan §22) — the
-    cheapest kill in the method, run before any fold or holdout is spent."""
+def screen_stage(data_dir: Path | None = None, trial_ledger: Path | None = None,
+                 folds: list[tuple[str, str, str]] | None = None):
+    """S2 wiring over factory/screens/policy.py: load the card, run the
+    policy, write the report artifact, put the measured screen on the
+    ledger (searches are trials too)."""
     def stage(run_dir, manifest) -> StageResult:
-        card = load_card(run_dir)
-        est = card["estimates"]
-        turnover = float(est.get("turnover_per_trade", 1.0))
-        if not 0 < turnover <= 1:
-            return StageResult(
-                "killed", f"turnover_per_trade {turnover} outside (0, 1] — "
-                          "a trade cannot transact more than its position")
-        # Resolution target (Plan §17.10): the smaller of the claimed edge and
-        # the full-round-trip 3x edge. For turnover-1 cards this is always the
-        # 3x edge (a claim below it dies at cost_coverage anyway), so every
-        # pre-§17.10 verdict is unchanged; for cheap rebalancing tilts the
-        # testability question becomes the claim itself.
-        edge_gate = min(est["gross_edge_per_trade"], 3 * ROUNDTRIP)
-        verdicts = [
-            core.noise_floor(est["per_trade_sd"], edge_gate,
-                             int(est["trades_available"])),
-            core.cost_coverage(est["gross_edge_per_trade"], ROUNDTRIP,
-                               turnover_per_trade=turnover),
-        ]
-        lines = [f"# Screen report — {card['name']}", "",
-                 "Screens run on the card's declared estimates (see "
-                 "estimates_basis); measured screens follow in S5.", ""]
-        for v in verdicts:
-            lines.append(f"- {'PASS' if v.passed else '**FAIL**'} `{v.gate}` — {v.reason}")
-        extra_kill = None
-        if card.get("cross_sectional"):
-            factor_card = card.get("factor") or {}
-            expr = factor_card.get("expr")
-            if not expr:
-                extra_kill = ("cross-sectional card declares no factor.expr "
-                              "(causal DSL) — the measured screen (Plan §22) "
-                              "cannot run")
-                lines += ["", f"- **FAIL** `factor_screen` — {extra_kill}"]
-            elif data_dir is None:
-                lines += ["", "**Cross-sectional card: a measured factor "
-                              "screen (ORACLE + NOISE arms) is REQUIRED "
-                              "before S5** (Plan §22) — no price data dir "
-                              "configured, run it manually."]
-            else:
-                from factory.screens.screen import FactorSpec, run_screen
-                try:
-                    res = run_screen(
-                        FactorSpec(name=card["name"], expr=expr,
-                                   universe=card["universe"],
-                                   timeframe=card["timeframe"]),
-                        data_dir, _art(run_dir))
-                except Exception as e:
-                    res = None
-                    extra_kill = f"factor screen failed to run: {e}"
-                    lines += ["", f"- **FAIL** `factor_screen` — {extra_kill}"]
-                if res is not None:
-                    lines += ["", res["report"]]
-                    cand = res["verdicts"][card["name"]]
-                    if trial_ledger:
-                        trials.append(trial_ledger, "factor_screen",
-                                      run_dir.name,
-                                      {"factor": card["name"], "expr": expr,
-                                       "passed": cand.passed,
-                                       "calibration_valid": res["valid"],
-                                       "ic": {str(h): v for h, v in
-                                              cand.ic_by_horizon.items()}})
-                    if not res["valid"]:
-                        extra_kill = ("factor screen calibration INVALID "
-                                      "(ORACLE/NOISE contract broken) — "
-                                      "fix the screen, not the factor")
-                    elif not cand.passed:
-                        extra_kill = f"factor_screen: {cand.reason}"
-        (_art(run_dir) / "screen_report.md").write_text("\n".join(lines) + "\n")
-        failed = [v for v in verdicts if not v.passed]
-        reasons = [f"{v.gate}: {v.reason}" for v in failed]
-        if extra_kill:
-            reasons.append(extra_kill)
-        if reasons:
-            return StageResult("killed", "; ".join(reasons))
-        return StageResult("passed", "estimate screens clear"
-                           + ("; measured factor screen passed"
-                              if card.get("cross_sectional") and data_dir
-                              else "; measured screens due in S5"))
+        card = card_mod.load(run_dir)
+        art = mf.artifacts_dir(run_dir)
+        out = policy.screen(card, out_dir=art, data_dir=data_dir, folds=folds)
+        if out.report_md:
+            (art / mf.SCREEN_REPORT_MD).write_text(out.report_md)
+        if out.factor_trial and trial_ledger:
+            trials.append(trial_ledger, "factor_screen", run_dir.name,
+                          out.factor_trial)
+        if not out.passed:
+            return StageResult("killed", "; ".join(out.reasons))
+        return StageResult("passed", out.summary,
+                           {"gates": [{"gate": g.gate, "passed": g.passed}
+                                      for g in out.gates],
+                            "measured_factor_screen": out.measured})
 
     return stage
 
@@ -241,21 +151,21 @@ def prereg_stage(agent_fn=None, ledger: Path | None = None, today: str = ""):
     agent_fn = agent_fn or llm.run_agent
 
     def stage(run_dir, manifest) -> StageResult:
-        art = _art(run_dir)
+        art = mf.artifacts_dir(run_dir)
         out = agent_fn(prompt=llm.load_prompt("preregister", today=today),
                        cwd=art, allowed_tools=["Read", "Write"])
         if ledger:
             _log_llm(ledger, run_dir, "S3", out)
-        f = art / "prereg.md"
+        f = art / mf.PREREG_MD
         if not f.exists():
-            return StageResult("killed", "prereg.md missing")
+            return StageResult("killed", f"{mf.PREREG_MD} missing")
         missing = [s for s in PREREG_SECTIONS if s not in f.read_text()]
         if missing:
             return StageResult("killed", f"prereg.md missing sections: {missing}")
         return StageResult(
             "needs_human",
-            "pre-registration drafted — review artifacts/prereg.md and sign: "
-            f"factory approve {run_dir.name} hg1",
+            f"pre-registration drafted — review artifacts/{mf.PREREG_MD} and "
+            f"sign: {mf.approve_command(run_dir.name, 'hg1')}",
         )
 
     return stage
@@ -293,8 +203,8 @@ def implement_stage(engine, trial_ledger: Path, agent_fn=None,
     agent_fn = agent_fn or llm.run_agent
 
     def stage(run_dir, manifest) -> StageResult:
-        art = _art(run_dir)
-        card = load_card(run_dir)
+        art = mf.artifacts_dir(run_dir)
+        card = card_mod.load(run_dir)
         name = card["name"]
         out = agent_fn(prompt=llm.load_prompt("implement", strategy_name=name),
                        cwd=art, allowed_tools=["Read", "Write"])
@@ -306,15 +216,13 @@ def implement_stage(engine, trial_ledger: Path, agent_fn=None,
         if problems:
             return StageResult("killed", "static checks failed: " + "; ".join(problems))
         # smoke backtest on a short SPENT window: does it load and run?
+        # (the engine records the trial and checks the holdout ledger)
         try:
             r = engine.backtest(name, card["timeframe"], smoke_timerange,
-                                fee=0.001, strategy_path=art)
+                                fee=WORKING.fee_per_side, run_id=run_dir.name,
+                                why="S4 smoke", strategy_path=art)
         except Exception as e:
             return StageResult("killed", f"smoke backtest failed: {e}")
-        trials.append(trial_ledger, "backtest", run_dir.name,
-                      {"strategy": name, "timerange": smoke_timerange,
-                       "fee": 0.001, "why": "S4 smoke",
-                       "trades": r.trade_count, "profit_total": r.profit_total})
         report = f"smoke backtest ran: {r.trade_count} trades on {smoke_timerange}"
         if r.trade_count == 0:
             report += " — WARNING: zero trades; entry logic may be dead"
@@ -325,18 +233,20 @@ def implement_stage(engine, trial_ledger: Path, agent_fn=None,
 
 # --- S5 validate (wired) ----------------------------------------------------
 
-def validate_stage(engine, trial_ledger: Path):
-    wf = json.loads((ROOT / "lab" / "user_data" / "notebooks" /
-                     "walkforward.json").read_text())
-
+def validate_stage(engine, trial_ledger: Path, costs=WORKING):
     def stage(run_dir, manifest) -> StageResult:
-        card = load_card(run_dir)
+        # read at run time, not build time: `factory run --to S2` must not
+        # require the lab checkout
+        wf = json.loads((ROOT / "lab" / "user_data" / "notebooks" /
+                         "walkforward.json").read_text())
+        card = card_mod.load(run_dir)
         purge = max(30, 2 * int(card["holding_period_days"]))
         folds = splitter.purge_existing(wf, purge_days=purge)
         spec = ValidateSpec(
-            strategy=card["name"], timeframe=card["timeframe"], fee=0.001,
+            strategy=card["name"], timeframe=card["timeframe"], costs=costs,
             folds=folds, full_timerange="20210101-20260101",
-            strategy_path=_art(run_dir),
+            turnover_per_trade=card_mod.turnover(card),
+            strategy_path=mf.artifacts_dir(run_dir),
             notes={"purge_days": purge, "why": "S5 pre-registered run"},
         )
         return run_validation(engine, spec, run_dir, trial_ledger)
@@ -346,11 +256,14 @@ def validate_stage(engine, trial_ledger: Path):
 
 # --- registry ---------------------------------------------------------------
 
-def build_stages(engine, trial_ledger: Path, agent_fn=None, today: str = ""):
+def build_stages(engine, trial_ledger: Path, agent_fn=None, today: str = "",
+                 holdout_ledger: Path | None = None):
+    if not isinstance(engine, RecordedEngine):
+        engine = RecordedEngine(engine, trial_ledger, holdout_ledger)
     return {
         "S0": intake_stage(agent_fn, trial_ledger),
         "S1": research_stage(agent_fn, trial_ledger),
-        "S2": screen_stage(getattr(engine, "data_dir", None), trial_ledger),
+        "S2": screen_stage(engine.data_dir, trial_ledger),
         "S3": prereg_stage(agent_fn, trial_ledger, today),
         "S4": implement_stage(engine, trial_ledger, agent_fn),
         "S5": validate_stage(engine, trial_ledger),
