@@ -31,6 +31,44 @@ class AgentUnavailable(RuntimeError):
     pass
 
 
+# --- the read guard -----------------------------------------------------------
+# Measured hole (Plan §17 topic 3): an S1 agent once Read its own 993k-char
+# session transcript out of ~/.claude/projects — one tool call, ~250k tokens,
+# ~5% of lifetime stage spend. Nothing scoped what stage agents may read, so
+# this guard does, deterministically, before the tool runs.
+
+def forbidden_read(tool_input: dict) -> str | None:
+    """Why a path-bearing tool call must not run, or None if it may.
+    Blocks: anything under ~/.claude (transcripts, configs, credentials),
+    any .jsonl (ledgers and transcripts are not research material), and
+    key files (.env*)."""
+    claude_dir = os.path.realpath(os.path.expanduser("~/.claude"))
+    for key in ("file_path", "path"):
+        p = tool_input.get(key)
+        if not p:
+            continue
+        rp = os.path.realpath(os.path.expanduser(str(p)))
+        if rp == claude_dir or rp.startswith(claude_dir + os.sep):
+            return (f"{key} is under ~/.claude — session transcripts and "
+                    "credentials are not stage inputs")
+        base = os.path.basename(rp)
+        if base.endswith(".jsonl"):
+            return "ledger/transcript .jsonl files are not stage inputs"
+        if base.startswith(".env"):
+            return "key files are not stage inputs"
+    return None
+
+
+async def _read_guard(input_data, tool_use_id, context) -> dict:
+    reason = forbidden_read((input_data or {}).get("tool_input") or {})
+    if reason:
+        return {"hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": reason}}
+    return {}
+
+
 def load_prompt(name: str, **subs: str) -> str:
     text = (PROMPTS / f"{name}.md").read_text()
     for k, v in subs.items():
@@ -46,13 +84,15 @@ def run_agent(prompt: str, cwd: Path, allowed_tools: list[str],
     budget odometer."""
     try:
         import anyio
-        from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
+        from claude_agent_sdk import (ClaudeAgentOptions, HookMatcher,
+                                      ResultMessage, query)
     except ImportError as e:  # pragma: no cover
         raise AgentUnavailable(f"claude-agent-sdk not installed: {e}") from e
 
     # Headless agents cannot answer permission prompts, so the mode is
-    # bypassPermissions and the real constraint is the per-stage tool
-    # allowlist (no Bash anywhere; S0/S3/S4 get Read/Write only).
+    # bypassPermissions and the real constraints are the per-stage tool
+    # allowlist (no Bash anywhere; S0/S3/S4 get Read/Write only) and the
+    # read guard hook — hooks run regardless of permission mode.
     options = ClaudeAgentOptions(
         cwd=str(cwd),
         allowed_tools=allowed_tools,
@@ -60,6 +100,8 @@ def run_agent(prompt: str, cwd: Path, allowed_tools: list[str],
         system_prompt=system_prompt,
         max_turns=max_turns,
         model=MODEL,
+        hooks={"PreToolUse": [HookMatcher(matcher="Read|Glob|Grep",
+                                          hooks=[_read_guard])]},
     )
 
     async def _run() -> dict:
