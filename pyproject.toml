@@ -5,6 +5,7 @@ description = "Agent pipeline that researches, implements, validates, deploys (d
 requires-python = ">=3.12"
 dependencies = [
     "claude-agent-sdk>=0.2.162",
+    "emd-signal>=1.10.0",
     "ipykernel>=7.4.0",
     "matplotlib>=3.11.2",
     "pandas>=3.0.6",

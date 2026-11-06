@@ -13,6 +13,11 @@ A negative shift is not "forbidden" here the way S4's regex forbids it in
 strategy source — it is unwritable.
 
 H3's factor, for scale:  ts_ret(close, 40) / ts_std(ts_ret(close, 1), 40)
+
+The causal-EMD pair (Plan §17.4) lives in the same contract: ts_emd_trend /
+ts_emd_noise recompute the decomposition per bar on the trailing window and
+keep only the newest value (factory/screens/cemd.py) — prefix-invariant,
+proven in tests/test_cemd.py, minimum window MIN_EMD_WINDOW.
 """
 
 from __future__ import annotations
@@ -22,9 +27,13 @@ import ast
 PANELS = ("close", "volume")
 # second argument: trailing window / lag length, int literal in [1, MAX_WINDOW]
 WINDOW_FUNCS = ("ts_ret", "ts_mean", "ts_std", "ts_min", "ts_max",
-                "ts_sum", "ts_lag")
+                "ts_sum", "ts_lag", "ts_emd_trend", "ts_emd_noise")
 UNARY_FUNCS = ("cs_rank", "cs_zscore", "log", "abs", "sign")
 MAX_WINDOW = 365
+# causal-EMD features (Plan §17.4): per-bar sifting needs room to find
+# oscillatory modes — a smaller window is numerology, so it does not parse
+EMD_FUNCS = ("ts_emd_trend", "ts_emd_noise")
+MIN_EMD_WINDOW = 64
 MAX_EXPR_LEN = 400
 _BINOPS = (ast.Add, ast.Sub, ast.Mult, ast.Div)
 
@@ -74,13 +83,14 @@ def validate(expr: str) -> ast.Expression:
                     raise FactorExprError(f"{fn} takes (series, window)")
                 check(node.args[0])
                 w = node.args[1]
+                lo = MIN_EMD_WINDOW if fn in EMD_FUNCS else 1
                 if (not isinstance(w, ast.Constant)
                         or isinstance(w.value, bool)
                         or not isinstance(w.value, int)
-                        or not 1 <= w.value <= MAX_WINDOW):
+                        or not lo <= w.value <= MAX_WINDOW):
                     raise FactorExprError(
                         f"{fn}: window must be an int literal in "
-                        f"[1, {MAX_WINDOW}] — causality lives here")
+                        f"[{lo}, {MAX_WINDOW}] — causality lives here")
             elif fn in UNARY_FUNCS:
                 if len(node.args) != 1:
                     raise FactorExprError(f"{fn} takes one argument")
@@ -99,6 +109,11 @@ def validate(expr: str) -> ast.Expression:
     return tree
 
 
+def _cemd():
+    from factory.screens import cemd  # heavy import kept local
+    return cemd
+
+
 def evaluate(expr: str, panels: dict):
     """Validated evaluation -> wide DataFrame (date x asset), inf -> NaN."""
     import numpy as np
@@ -115,6 +130,8 @@ def evaluate(expr: str, panels: dict):
         "ts_max": lambda x, n: x.rolling(n).max(),
         "ts_sum": lambda x, n: x.rolling(n).sum(),
         "ts_lag": lambda x, n: x.shift(n),
+        "ts_emd_trend": lambda x, n: _cemd().rolling(x, n, "trend"),
+        "ts_emd_noise": lambda x, n: _cemd().rolling(x, n, "noise"),
         "cs_rank": lambda x: x.rank(axis=1, pct=True),
         "cs_zscore": lambda x: (x.sub(x.mean(axis=1), axis=0)
                                 .div(x.std(axis=1), axis=0)),
