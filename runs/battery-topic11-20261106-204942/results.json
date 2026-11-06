@@ -1,0 +1,78 @@
+{
+ "FundingCarryTilt": {
+  "design": "cross_sectional_ic",
+  "calibration_valid": true,
+  "passed": true,
+  "reason": "best horizon 21d needs IC>0 with t\u22652.0; h1: IC +0.0396 (t +1.9), h5: IC +0.0637 (t +3.1), h21: IC +0.0931 (t +4.7)",
+  "ic_by_horizon": {
+   "1": {
+    "mean": 0.0396,
+    "t": 1.9243
+   },
+   "5": {
+    "mean": 0.0637,
+    "t": 3.1152
+   },
+   "21": {
+    "mean": 0.0931,
+    "t": 4.7092
+   }
+  }
+ },
+ "ListingAgeEffect": {
+  "design": "cross_sectional_ic",
+  "calibration_valid": true,
+  "passed": false,
+  "reason": "best horizon 1d needs IC>0 with t\u22652.0; h1: IC -0.0611 (t -2.4), h5: IC -0.0808 (t -3.2), h21: IC -0.0970 (t -3.7)",
+  "ic_by_horizon": {
+   "1": {
+    "mean": -0.0611,
+    "t": -2.4313
+   },
+   "5": {
+    "mean": -0.0808,
+    "t": -3.2445
+   },
+   "21": {
+    "mean": -0.097,
+    "t": -3.6679
+   }
+  }
+ },
+ "BtcLeadLag": {
+  "design": "conditional",
+  "calibration_valid": true,
+  "passed": false,
+  "pooled_t": -1.22,
+  "diff_bp_per_day": -25.46,
+  "per_fold_t": [
+   -1.23,
+   -0.78,
+   -0.87,
+   -0.99,
+   -0.81,
+   -0.81,
+   0.26
+  ],
+  "oracle_t": 39.9,
+  "placebo_t": 0.66
+ },
+ "WeekendSeasonality": {
+  "design": "conditional",
+  "calibration_valid": true,
+  "passed": false,
+  "pooled_t": -0.17,
+  "diff_bp_per_day": -3.47,
+  "per_fold_t": [
+   0.42,
+   0.77,
+   0.37,
+   -0.14,
+   0.34,
+   0.17,
+   -0.73
+  ],
+  "oracle_t": 39.9,
+  "placebo_t": 0.77
+ }
+}
