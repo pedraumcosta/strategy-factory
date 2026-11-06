@@ -8,6 +8,7 @@ dependencies = [
     "emd-signal>=1.10.0",
     "ipykernel>=7.4.0",
     "matplotlib>=3.11.2",
+    "nixtla>=0.7.2",
     "pandas>=3.0.6",
     "papermill>=2.7.0",
     "pyarrow>=25.0.1",

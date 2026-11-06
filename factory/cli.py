@@ -246,6 +246,83 @@ def cmd_novelty(args) -> None:
           "calibration deliberately cannot see it).")
 
 
+def cmd_timegpt(args) -> None:
+    """S7 second alarm candidate (Plan §17 topic 5; shelf §20.17): TimeGPT
+    online anomaly detection as the model-based complement to MASS. A
+    calibration report, deliberately NOT a pager — nominal vs empirical
+    flag rates on our own tape, and the agreement table with the MASS
+    alarm, so a human can decide whether this vendor earns a threshold."""
+    import numpy as np
+    from factory import similarity as sim
+    from factory import timegpt as tg
+    from factory.ledgers import holdout, trials
+    from factory.screens.screen import load_panels
+
+    symbols = (args.universe.split(",") if args.universe else
+               ["ADA", "ALGO", "AVAX", "BNB", "BTC", "DOGE", "ETH", "HBAR",
+                "LINK", "LTC", "NEAR", "SOL", "TRX", "UNI", "XLM", "XRP", "ZEC"])
+    try:
+        client = tg.make_client()
+    except tg.TimeGPTUnavailable as e:
+        sys.exit(str(e))
+    panels = load_panels(Path(args.data_dir).expanduser(), symbols,
+                         args.timeframe, hard_stop=None)
+    spans = sim.forbidden_spans(holdout.windows(HOLDOUT))
+
+    print(f"# TimeGPT online anomaly calibration — model {tg.MODEL}, "
+          f"level {args.level}, last {args.detection_size} bars judged "
+          f"({args.timeframe}); clean/accruing candles never sent\n")
+    print(f"{'pair':>6} {'segment':>19} {'flags':>6} {'rate':>7} "
+          f"{'both':>5} {'tg only':>8} {'mass only':>10}")
+    all_flags, calls = [], 0
+    pooled = {"both": 0, "timegpt_only": 0, "mass_only": 0}
+    for sym in symbols:
+        close = tg.readable_segment(panels["close"][sym].dropna(), spans)
+        if len(close) < 4 * args.detection_size:
+            print(f"{sym:>6}  (readable segment too short)")
+            continue
+        res = tg.detect(client, close, args.level, args.detection_size, args.h)
+        calls += 1
+        tail = res.tail(args.detection_size)
+        flags = tail["anomaly"].to_numpy(dtype=bool)
+        all_flags.append(flags)
+        tail_dates = [d.strftime("%Y%m%d") for d in tail["ds"]]
+        tg_dates = {d for d, f in zip(tail_dates, flags) if f}
+        x = np.log(close.to_numpy(dtype=float))
+        dates = [d.strftime("%Y%m%d") for d in close.index]
+        mass_dates = tg.mass_crossings(
+            x, dates, args.mass_window,
+            np.ones(len(x) - args.mass_window + 1, bool), tail_dates)
+        agr = tg.agreement(tg_dates, mass_dates)
+        for k in pooled:
+            pooled[k] += agr[k]
+        cov = tg.coverage(flags, args.level)
+        print(f"{sym:>6} {dates[0]}-{dates[-1]:>8} {cov['flagged']:>6} "
+              f"{cov['rate']:7.1%} {agr['both']:>5} {agr['timegpt_only']:>8} "
+              f"{agr['mass_only']:>10}")
+
+    if all_flags:
+        cov = tg.coverage(np.concatenate(all_flags), args.level)
+        print(f"\npooled: {cov['flagged']} flags over {cov['n']} point-days "
+              f"— empirical {cov['rate']:.2%} vs nominal "
+              f"{cov['nominal']:.2%} (expected ~{cov['expected']:.1f} under "
+              f"the vendor's own calibration claim)")
+    print("\nReading (the §17.2 rule): an empirical rate far above nominal "
+          "says the vendor's intervals are miscalibrated on this tape — "
+          "shelf §20.17 measured 80% intervals covering 37.5-89.9%. The "
+          "agreement table is the model-based vs model-free cross-check. "
+          "A human picks thresholds from this report; nothing pages.")
+    cost = round(calls * tg.COST_PER_CALL_USD, 4)
+    trials.append(LEDGER, "vendor_api", "adhoc",
+                  {"vendor": "nixtla", "endpoint": "detect_anomalies_online",
+                   "model": tg.MODEL, "calls": calls, "cost_usd": cost,
+                   "level": args.level, "detection_size": args.detection_size,
+                   "note": "cost at the Standard-tier marginal rate; the "
+                           "free Starter tier covers 50 calls/month"})
+    print(f"\nledger: {calls} API calls recorded (${cost:.2f} at the "
+          f"Standard-tier marginal rate)")
+
+
 def cmd_ledger(args) -> None:
     if not LEDGER.exists():
         print("empty ledger")
@@ -301,6 +378,18 @@ def main() -> None:
     s.add_argument("--timeframe", default="1d")
     s.add_argument("--data-dir", default="~/freqtrade-data")
     s.set_defaults(fn=cmd_novelty)
+    s = sub.add_parser("timegpt")
+    s.add_argument("--detection-size", type=int, default=90,
+                   help="trailing bars the vendor judges (default 90)")
+    s.add_argument("--level", type=int, default=99)
+    s.add_argument("--h", type=int, default=1)
+    s.add_argument("--mass-window", type=int, default=30,
+                   help="MASS novelty window for the agreement table")
+    s.add_argument("--universe", default="",
+                   help="comma-separated symbols; default = the 17-pair universe")
+    s.add_argument("--timeframe", default="1d")
+    s.add_argument("--data-dir", default="~/freqtrade-data")
+    s.set_defaults(fn=cmd_timegpt)
     s = sub.add_parser("dryrun-review"); s.add_argument("data_dir")
     s.set_defaults(fn=cmd_dryrun_review)
     s = sub.add_parser("reject"); s.add_argument("run_id")
