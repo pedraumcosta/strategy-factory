@@ -16,6 +16,7 @@ def test_loads_keys_and_never_overrides_the_shell(tmp_path):
         "NIXTLA_API_KEY=abc123\n"
         "export TYPESAFE_API_KEY='quoted value'\n"
         "ALREADY_SET=from_file\n"
+        "BLANK_SLOT=\n"
         "not a key-value line\n")
     env = {"ALREADY_SET": "from_shell"}
     loaded = load_env(f, environ=env)
@@ -23,6 +24,8 @@ def test_loads_keys_and_never_overrides_the_shell(tmp_path):
     assert env["NIXTLA_API_KEY"] == "abc123"
     assert env["TYPESAFE_API_KEY"] == "quoted value"   # export + quotes stripped
     assert env["ALREADY_SET"] == "from_shell"          # the shell wins
+    # an unfilled .env.example slot must not shadow the SDK's login fallback
+    assert "BLANK_SLOT" not in env
 
 
 def test_missing_file_is_a_quiet_noop(tmp_path):

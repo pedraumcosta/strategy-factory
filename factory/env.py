@@ -32,7 +32,10 @@ def load_env(path: Path = ENV_FILE, environ=os.environ) -> list[str]:
         name, value = name.strip(), value.strip()
         if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
             value = value[1:-1]
-        if name and name not in environ:
+        # A blank slot (copied straight from .env.example) must not inject an
+        # empty var — the Agent SDK treats a set-but-empty ANTHROPIC_API_KEY
+        # as a key and skips its login fallback.
+        if name and value and name not in environ:
             environ[name] = value
             loaded.append(name)
     return loaded
