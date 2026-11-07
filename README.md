@@ -11,7 +11,11 @@ prompt ─► Intake ─► Research ─► Screen ─► Pre-register ─► Im
                               graveyard       the pre-reg                 the dossier  the deploy
 ```
 
-**Status: M0 — scaffold.** Design in [`docs/DESIGN.md`](docs/DESIGN.md); roadmap M0–M8 at its end.
+**Status: operational.** The M0–M8 roadmap closed 2026-09-30; the pipeline has since run
+real candidates and killed them at the right stages, a dry-run observes on the VM, and the
+holdout matures 2027-03-28. Design in [`docs/DESIGN.md`](docs/DESIGN.md); the decision
+record (status, gate changes, every battery's registration and results) is
+[`docs/PLAN.md`](docs/PLAN.md).
 
 ## What this is, in one paragraph
 
@@ -21,8 +25,46 @@ arms, exposure-scaled passive benchmarks, return concentration — and killed al
 for a diagnosed reason. This factory is that method, mechanized: the gates become stage
 validators, pre-registration becomes a blocking human gate, holdout data becomes physically
 unmountable without a signed spend approval, and every run appends to a trial ledger so the
-deflated Sharpe is computable instead of aspirational. The six corpses are the regression
-suite: **the factory must re-kill every one of them, at the right stage, for the right reason.**
+deflated Sharpe is computable instead of aspirational. The graveyard — now eight corpses
+spanning the 2020 live bot, that manual gauntlet and the factory's own runs — is the
+regression suite: **the factory must re-kill every corpse, at the right stage, for the right
+reason**, and each corpse carries a full dossier (data, universe, timeframe, construction,
+performance, why it was killed).
+
+## The CLI
+
+```
+factory new "hypothesis idea..."      create a run (S0 intake writes the card)
+factory run <run-id> [--to S5]        advance the pipeline
+factory approve <run-id> <gate>       sign a human gate (hg1|hg2|hg2b|hg3)
+factory reject <run-id>               record a human kill
+factory replay <run-id>               re-issue a run killed by infrastructure, not verdict
+factory status [<run-id>]             show runs / one run's stages
+factory ledger                        trial counts + LLM spend
+factory record [--out f.md]           render the tested register (below)
+factory dryrun-review <data-dir>      judge a deployed dry-run's week
+```
+
+`factory record` renders **the tested register**: every strategy ever tried — the 2020
+live-bot era, the manual 2026-09 gauntlet, the factory era — each with its data, universe,
+timeframe, construction, performance, result and kill reason. It is a query over the
+machine record (graveyard, kinship scopes, run manifests, battery results, trial ledger),
+never a hand-maintained document: when it looks wrong, fix the record, not the report.
+
+## Candidate sources beyond the pipeline
+
+- **Pre-registered factor batteries** ([`tools/run_battery.py`](tools/run_battery.py),
+  [`tools/run_battery12.py`](tools/run_battery12.py)): deterministic screens, zero LLM
+  spend, each battery's premises and pass bars committed to `docs/PLAN.md` §17 *before*
+  any run. Topic 12 added a regression arm that re-runs topic 11 and demands bit-for-bit
+  equality with its committed results (recorded IDENTICAL, twice).
+- **Data families**, fetched outside the repo beside the price data: 8h perp funding
+  ([`tools/fetch_funding.py`](tools/fetch_funding.py)) — also a causal `funding` panel in
+  the screen DSL — and daily open interest ([`tools/fetch_oi.py`](tools/fetch_oi.py),
+  Binance Vision, published from 2021-12-01).
+- **Graveyard kinship at S0**: an advisory flag judging every new card against the closed
+  idea-space families before any fold is spent — verdict and confidence land in the run's
+  `kinship.json` and on the ledger; it informs HG1, it never kills.
 
 ## Hard rules
 
