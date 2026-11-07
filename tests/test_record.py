@@ -70,6 +70,31 @@ def test_every_corpse_answers_the_dossier_questions():
         assert not missing, f"{c['name']} missing {missing}"
 
 
+def test_battery_screens_reads_the_regression_arm_shape(tmp_path):
+    """A battery with a regression arm writes {candidates, regression,
+    regression_identical: bool} — the bool must not crash the reader, the
+    regression candidates must not re-list, and the arm renders as one
+    IDENTICAL/DIVERGED verdict row."""
+    runs = tmp_path / "runs"
+    bat = runs / "battery-nested-1"
+    bat.mkdir(parents=True)
+    (bat / "results.json").write_text(json.dumps({
+        "candidates": {"CandZ": {"design": "cross_sectional_ic",
+                                 "passed": False, "calibration_valid": True,
+                                 "ic_by_horizon": {"1": {"t": 0.4}}}},
+        "regression_identical": True,
+        "regression": {"OldCand": {"design": "conditional", "passed": False,
+                                   "calibration_valid": True,
+                                   "pooled_t": -0.2}}}))
+    rows = record.battery_screens(runs)
+    assert [r["candidate"] for r in rows] == ["CandZ",
+                                              "regression arm (OldCand)"]
+    text = record.render([], [], [], [], batteries=rows)
+    assert "CandZ" in text and "KILL" in text
+    assert "regression arm (OldCand)" in text and "IDENTICAL" in text
+    assert "OldCand** (conditional" not in text   # not re-listed as a result
+
+
 def test_render_skips_missing_ledger(tmp_path):
     assert record.factor_screens(tmp_path / "absent.jsonl") == []
 
@@ -81,7 +106,8 @@ def test_real_record_renders():
         record.closed_families(fixtures / "kinship_families.json"),
         record.graveyard_corpses(fixtures / "graveyard.json"),
         record.pipeline_runs(ROOT / "runs"),
-        record.factor_screens(ROOT / "ledgers" / "trials.jsonl"))
+        record.factor_screens(ROOT / "ledgers" / "trials.jsonl"),
+        batteries=record.battery_screens(ROOT / "runs"))
     for expected in ("lowvol_ranktilt", "FundingCarryTilt",
                      "short_term_reversal", "zero_fee_sanity"):
         assert expected in text
