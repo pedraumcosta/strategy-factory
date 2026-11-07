@@ -4,17 +4,28 @@
  "created_at": "2026-11-06T22:20:32-0300",
  "stages": {
   "S0": {
-   "status": "killed",
-   "started_at": "2026-11-06T22:20:37-0300",
-   "report": "invalid hypothesis card: factor.expr rejected by the causal DSL: name 'funding' is not a panel ('close', 'volume')",
-   "data": {},
-   "finished_at": "2026-11-06T22:22:27-0300"
+   "status": "passed",
+   "started_at": "2026-11-06T22:26:55-0300",
+   "report": "card for FundingCarryTilt",
+   "data": {
+    "name": "FundingCarryTilt",
+    "kinship": "novel"
+   },
+   "finished_at": "2026-11-06T22:28:45-0300"
   },
   "S1": {
-   "status": "pending"
+   "status": "passed",
+   "started_at": "2026-11-06T22:28:45-0300",
+   "report": "research memo written",
+   "data": {},
+   "finished_at": "2026-11-06T22:31:08-0300"
   },
   "S2": {
-   "status": "pending"
+   "status": "killed",
+   "started_at": "2026-11-06T22:31:08-0300",
+   "report": "noise_floor: needs \u226548621 trades to resolve a 0.0400% edge at sd 4.50%; history supplies 25000; cost_coverage: coverage 0.91\u00d7 vs required 3.0\u00d7 (cost scaled by turnover 22%/trade)",
+   "data": {},
+   "finished_at": "2026-11-06T22:31:16-0300"
   },
   "S3": {
    "status": "pending"
