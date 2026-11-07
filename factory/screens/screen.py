@@ -65,12 +65,16 @@ def registered_folds() -> list[tuple[str, str, str]]:
 
 def load_panels(data_dir: Path, universe: list[str],
                 timeframe: str = "1d", hard_stop: str | None = HARD_STOP) -> dict:
-    """{close, volume} wide panels from <data_dir>/<EXCHANGE>/SYM_USDT-<tf>.feather,
-    tz-naive daily index, capped at `hard_stop` (the screen's registered IS
-    cap by default). Pass hard_stop=None to read everything and let the
-    holdout ledger's spans decide readability instead — the similarity
-    tools (factory scenarios / novelty) do this, since the ledger, not a
-    constant, is the authority on what is spent."""
+    """{close, volume[, funding]} wide panels, tz-naive daily index, capped
+    at `hard_stop` (the screen's registered IS cap by default). Prices come
+    from <data_dir>/<EXCHANGE>/SYM_USDT-<tf>.feather; the funding panel is
+    added only when <data_dir>/funding/ exists (SYM_USDT-funding.feather,
+    one row per 8h event — see tools/fetch_funding.py), daily-summed and
+    reindexed onto close's index so the same cap governs every panel. Pass
+    hard_stop=None to read everything and let the holdout ledger's spans
+    decide readability instead — the similarity tools (factory scenarios /
+    novelty) do this, since the ledger, not a constant, is the authority on
+    what is spent."""
     import pandas as pd
 
     closes, vols, missing = {}, {}, []
@@ -89,7 +93,32 @@ def load_panels(data_dir: Path, universe: list[str],
             f"no {timeframe} data for {missing} under {data_dir / EXCHANGE}")
     close = pd.DataFrame(closes).sort_index().loc[:hard_stop]
     volume = pd.DataFrame(vols).sort_index().loc[:hard_stop]
-    return {"close": close, "volume": volume}
+    panels = {"close": close, "volume": volume}
+
+    funding_dir = data_dir / "funding"
+    if funding_dir.is_dir():
+        funds, fmissing = {}, []
+        for pair in universe:
+            sym = pair.split("/")[0].upper()
+            f = funding_dir / f"{sym}_USDT-funding.feather"
+            if not f.exists():
+                fmissing.append(sym)
+                continue
+            df = pd.read_feather(f)
+            idx = pd.DatetimeIndex(
+                pd.to_datetime(df["date"], utc=True)).tz_localize(None)
+            funds[sym] = (pd.Series(df["fundingRate"].astype(float).values,
+                                    index=idx)
+                          .resample("D").sum(min_count=1))
+        if fmissing:
+            # a half-covered funding panel would silently bias every
+            # cross-sectional rank toward the covered names
+            raise FileNotFoundError(
+                f"funding data exists under {funding_dir} but is missing "
+                f"for {fmissing} — fetch it (tools/fetch_funding.py) or "
+                "remove the directory")
+        panels["funding"] = pd.DataFrame(funds).sort_index().reindex(close.index)
+    return panels
 
 
 def _rowwise_pearson(a, b):

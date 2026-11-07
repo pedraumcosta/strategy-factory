@@ -1,0 +1,35 @@
+{
+ "run_id": "20261106-222032-fundingcarrytilt-cross-sectional-funding",
+ "prompt": "FundingCarryTilt \u2014 cross-sectional funding-carry tilt on the 17-pair Binance USDT-perp universe: rank pairs daily by the negative of the 7-day mean of daily-summed 8h funding rates (most negative funding ranks top) and tilt long the top of the rank. Economic mechanism: perp funding is a direct payment between shorts and longs; persistently negative funding means shorts are paying longs to hold, so collecting that carry is compensated risk, not a statistical accident. Provenance: Plan \u00a717 topic 11 (model-suggested battery, \u00a73-governed source) \u2014 survived the measured \u00a722 screen with pooled rank IC +0.0931 at the 21d horizon (t +4.7, the strongest screen IC on this ledger; h5 +0.0637, t +3.1), calibration valid. Registered caveats S1 MUST address: (1) screen IC is not monetizable edge (\u00a717.8 LowVolatility precedent) \u2014 the \u00a717.10 turnover-aware cost gate applies, with turnover_per_trade derived honestly from the daily-rebalanced tilt, not asserted; (2) overlap with the dead short_term_reversal family \u2014 negative funding co-occurs with recent drawdowns, so S1 must show the carry signal is not reversal wearing carry clothes (e.g. IC after controlling for trailing 7d return); (3) funding data starts 2020 (HBAR 2021-03), so fold 1 is thin; (4) carry strategies crowd \u2014 the screen cannot see crowding; S1 should reason about capacity and regime dependence (funding sign flips in bear markets).",
+ "created_at": "2026-11-06T22:20:32-0300",
+ "stages": {
+  "S0": {
+   "status": "killed",
+   "started_at": "2026-11-06T22:20:37-0300",
+   "report": "invalid hypothesis card: factor.expr rejected by the causal DSL: name 'funding' is not a panel ('close', 'volume')",
+   "data": {},
+   "finished_at": "2026-11-06T22:22:27-0300"
+  },
+  "S1": {
+   "status": "pending"
+  },
+  "S2": {
+   "status": "pending"
+  },
+  "S3": {
+   "status": "pending"
+  },
+  "S4": {
+   "status": "pending"
+  },
+  "S5": {
+   "status": "pending"
+  },
+  "S6": {
+   "status": "pending"
+  },
+  "S7": {
+   "status": "pending"
+  }
+ }
+}
