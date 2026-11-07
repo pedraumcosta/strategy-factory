@@ -5,6 +5,7 @@
     factory approve <run-id> <gate>       sign a human gate (hg1|hg2|hg2b|hg3)
     factory status [<run-id>]             show runs / one run's stages
     factory ledger                        trial counts + LLM spend
+    factory record [--out f.md]           the tested register (all verdicts)
 
 The stage sequence, the gate topology and what each gate signs over live in
 factory/orchestrator/manifest.py (the run module); this file only relays.
@@ -360,6 +361,22 @@ def cmd_ledger(args) -> None:
                   f"{p['cost_usd']:>8.2f}")
 
 
+def cmd_record(args) -> None:
+    from factory import record
+    fixtures = ROOT / "fixtures"
+    text = record.render(
+        record.closed_families(fixtures / "kinship_families.json"),
+        record.graveyard_corpses(fixtures / "graveyard.json"),
+        record.pipeline_runs(RUNS),
+        record.factor_screens(LEDGER),
+        batteries=record.battery_screens(RUNS))
+    if args.out:
+        Path(args.out).write_text(text)
+        print(f"wrote {args.out}")
+    else:
+        print(text)
+
+
 def main() -> None:
     from factory.env import load_env
     load_env()
@@ -378,6 +395,10 @@ def main() -> None:
     s = sub.add_parser("status"); s.add_argument("run_id", nargs="?")
     s.set_defaults(fn=cmd_status)
     s = sub.add_parser("ledger"); s.set_defaults(fn=cmd_ledger)
+    s = sub.add_parser("record",
+                       help="the tested register, rendered from the record")
+    s.add_argument("--out", default="")
+    s.set_defaults(fn=cmd_record)
     s = sub.add_parser("factor-screen"); s.add_argument("expr")
     s.add_argument("--name", default="Candidate")
     s.add_argument("--universe", default="",

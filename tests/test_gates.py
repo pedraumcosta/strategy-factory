@@ -45,6 +45,16 @@ def test_h1_tuned_dies_at_control_arm():
     assert not v.passed
 
 
+def test_bbrsi_dies_at_control_arm():
+    f = GRAVEYARD["bbrsi_2020"]
+    v = core.control_arm(
+        f["candidate_mean_oos"], f["control_mean_oos"], f["folds_won"], f["n_folds"]
+    )
+    # it won a (bare) majority of folds; losing the OOS mean to the
+    # zero-parameter control is what kills it
+    assert not v.passed
+
+
 def test_h4_dies_at_noise_floor():
     f = GRAVEYARD["h4_kalman_spread"]
     v = core.noise_floor(f["per_trade_sd"], f["edge_gate"], f["trades_available"])

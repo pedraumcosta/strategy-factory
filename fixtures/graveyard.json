@@ -1,21 +1,57 @@
 {
- "_comment": "Recorded numbers from the manual Sep 2026 gauntlet (Autotrader Plan \u00a712-\u00a722). The test suite requires each corpse to be re-killed by its gate for its documented reason.",
+ "_comment": "Recorded numbers from the 2020 live era and the manual Sep 2026 gauntlet (Autotrader Plan §12-§22), plus factory-era corpses. The test suite requires each corpse to be re-killed by its gate for its documented reason. The context fields (era/data/universe/timeframe/construction/performance/why_killed) are the dossier `factory record` renders; the numeric fields are what the gates re-kill.",
  "strategy005": {
   "killed_by": "zero_fee_sanity",
   "profit_total_at_zero_fee": -0.4955,
-  "source": "Plan \u00a712 \u2014 the 2020 live bot: -49.55% over 5y at ZERO fees"
+  "era": "2020 live bot (ran Binance spot 2020-09-09→2020-09-16)",
+  "data": "Live: the bot's own 23-pair 1h/5m OHLCV download 2018-09-13→2020-09-01 (preserved in techanalysis/ft_userdata, tradesv3.sqlite holds the 167 live trades). Kill: Binance spot 1h OHLCV, 2021-01-01→2026-01-01, zero-fee cost sweep.",
+  "universe": "Live: BTC-quoted pairs (167 trades). Kill: the frozen 17-pair USDT universe.",
+  "timeframe": "Live config 5m (the 1h backtest that justified it was a DIFFERENT strategy: the volume filter's window means changes with timeframe — 1 trade in 3 weeks at 1h vs 27/day at 5m). Kill: 1h.",
+  "construction": "Hand-coded freqtrade strategy class: TA mean reversion (RSI/Fisher-RSI/EMA conditions, volume>4x rolling-200 entry filter), community-sourced.",
+  "performance": "Live 6 days: 167 trades, 58.1% win rate, net ≈0 BTC with 7 trades abandoned open. Kill sweep: 2,209 trades, -49.55% at ZERO fee (DD 56.5%); -74.02% at the standard 0.1%/side.",
+  "why_killed": "No gross edge exists at any fee — at zero cost it loses half the account; costs then double the damage. A signal problem, not a cost problem.",
+  "source": "Plan §12 — the 2020 live bot: -49.55% over 5y at ZERO fees"
+ },
+ "bbrsi_2020": {
+  "killed_by": "control_arm",
+  "candidate_mean_oos": -5.91,
+  "control_mean_oos": -5.42,
+  "folds_won": 4,
+  "n_folds": 7,
+  "era": "2020 workspace strategy, judged by the 2026-09 walk-forward gauntlet",
+  "data": "Binance spot 1h OHLCV, 17 pairs, 2021-01-01→2026-09 IS/OOS folds (50,311 candles/pair); fee 0.1%/side.",
+  "universe": "The frozen 17-pair USDT StaticPairList.",
+  "timeframe": "1h",
+  "construction": "Bollinger+RSI mean reversion ported from the 2020 bbrsi_opt.py pair into one hyperoptable class (3 buy + 3 sell parameters); 100 hyperopt epochs per fold on in-sample only, applied unchanged OOS. As parameterised by the 2020 hyperopt: -28.62% with 44% DD (reproduced to the digit).",
+  "performance": "Walk-forward 7 folds: mean IS -3.73%, mean OOS -5.91%, OOS-profitable 1 of 7 (that fold made 2 trades). The zero-parameter control Strategy005v0 did better OOS (-5.42%).",
+  "why_killed": "The optimised strategy lost to an unoptimisable control out-of-sample — 700 hyperopt epochs bought only in-sample flattery; hyperopt found no profitable IS fit at all in folds 1 and 7.",
+  "source": "Plan §13 — mean OOS -5.91% vs control -5.42%; profitable OOS in 1 of 7 folds"
  },
  "bot2020_costs": {
   "killed_by": "cost_coverage",
   "gross_edge_per_trade": 0.000837,
   "roundtrip_cost": 0.001556,
-  "source": "Plan \u00a712 \u2014 +0.0837%/trade gross vs 0.1556% round-trip cost (coverage 0.54x, needs 3x)"
+  "era": "2020 live bot's recorded 1h backtest, reproduced 2026-09-28",
+  "data": "The 2020 run's own OHLCV files: 23 pairs × 1h, 2018-09-13→2020-09-01; fee pinned at 0.001 as the 2020 result recorded.",
+  "universe": "23 Binance pairs (the 2020 download).",
+  "timeframe": "1h",
+  "construction": "The 2020 bot's stored backtest, re-run on freqtrade 2026.8: 1,098 trades vs 1,062 stored, win rate within 0.6pp, average hold identical to the minute.",
+  "performance": "+4.86% over ~2y (stored: +9.00% under 2020's more optimistic fill model) — a real but thin 1h edge, ~+2.4%/yr against a 12.3% drawdown.",
+  "why_killed": "Gross edge +0.0837%/trade vs 0.1556% round-trip cost: coverage 0.54× where 3× is required. The edge exists and the fee structure eats it.",
+  "source": "Plan §12 — +0.0837%/trade gross vs 0.1556% round-trip cost (coverage 0.54x, needs 3x)"
  },
  "h2_trendvoltarget": {
   "killed_by": "cost_coverage",
   "cost_coverage_recorded": -0.04,
   "roundtrip_cost": 0.001556,
-  "source": "Plan \u00a713 \u2014 cost coverage -0.04x at default parameters"
+  "era": "manual gauntlet round 2 (2026-09-28/29), pre-registered",
+  "data": "Binance spot 4h OHLCV, 17 pairs, 2021→2026 walk-forward folds; fee swept 0→0.3%/side.",
+  "universe": "The frozen 17-pair USDT universe.",
+  "timeframe": "4h",
+  "construction": "Hand-coded single-pair trend following: long breakout entry with ATR trailing stop and volatility-targeted position sizing; long lookbacks targeting ≤400 trades/5y.",
+  "performance": "-0.20% at zero fee degrading to -10.25% at 0.3%/side; fold-level results existed only under per-fold fitting.",
+  "why_killed": "No gross edge at default parameters — cost coverage -0.04× against the 3× requirement; nothing for costs to even erode.",
+  "source": "Plan §13 — cost coverage -0.04x at default parameters"
  },
  "h1_xsmomentum_tuned": {
   "killed_by": "control_arm",
@@ -23,7 +59,14 @@
   "control_mean_oos": 7.4,
   "folds_won": 1,
   "n_folds": 7,
-  "source": "Plan \u00a715 \u2014 tuned arm lost to its own untuned defaults in 6 of 7 folds"
+  "era": "manual gauntlet round 2 (2026-09-28/29), pre-registered",
+  "data": "Binance spot 1d OHLCV, 17 pairs, 7 walk-forward folds (18m IS / 6m OOS); fee 0.1%/side.",
+  "universe": "The frozen 17-pair USDT universe.",
+  "timeframe": "1d",
+  "construction": "Cross-sectional momentum: rank by trailing return, hold top-k; lookback and top_k hyperopted per fold on in-sample only (the tuned arm). The untuned a-priori defaults (lookback 40, top_k 3) ran as H3.",
+  "performance": "Tuned +3.24% mean OOS vs its own untuned defaults +7.40%; beat the defaults in 1 of 7 folds.",
+  "why_killed": "The search fit noise: tuning made the strategy worse out-of-sample than its own fixed defaults. (H3, the untuned arm, later died at G5 concentration — September alone 78% of profit — and §22 killed the underlying factor: see h1h3_factor.)",
+  "source": "Plan §15 — tuned arm lost to its own untuned defaults in 6 of 7 folds"
  },
  "h4_kalman_spread": {
   "killed_by": "noise_floor",
@@ -31,13 +74,27 @@
   "edge_gate": 0.006,
   "trades_available": 90,
   "trades_needed_recorded": 2400,
-  "source": "Plan \u00a721 \u2014 sd ~15pp on a 21-day hold vs a 0.6% gate; ~90 trades in 5y of dailies"
+  "era": "manual gauntlet round 3 (2026-09-29), killed before pre-registration",
+  "data": "Binance BTC-quoted cross rates (ETH/BTC and peers), 1d, 5y.",
+  "universe": "BTC-quoted crosses of the 17-pair names.",
+  "timeframe": "1d",
+  "construction": "Kalman/DLM time-varying hedge-ratio residual on each cross, traded as single-pair mean reversion on residual z-score bands.",
+  "performance": "ETH/BTC -0.55% gross per round trip (grid median); no cointegration in 0–2 of 7 folds; every pair inside its random-entry band.",
+  "why_killed": "Statistically unrunnable: ~90 trades available in 5y of dailies vs ~2,400 needed to resolve a 0.6% edge at 15pp per-trade sd on a 21-day hold. The experiment cannot distinguish its result from luck.",
+  "source": "Plan §21 — sd ~15pp on a 21-day hold vs a 0.6% gate; ~90 trades in 5y of dailies"
  },
  "h1h3_factor": {
   "killed_by": "factor_screen",
   "screen_csv": "lab/user_data/factor_screen.csv",
   "factor": "XSMomentum",
-  "source": "Plan \u00a722 \u2014 IC negative at 9 of 9 horizons (pooled t to -6.1), top quintile worst of five"
+  "era": "manual gauntlet §22 (2026-09), the first measured factor screen",
+  "data": "Binance spot 1d OHLCV, 17 pairs, the registered IS folds.",
+  "universe": "The frozen 17-pair USDT universe.",
+  "timeframe": "1d",
+  "construction": "The factor under H1/H3: ts_ret(close, 40) / ts_std(ts_ret(close, 1), 40) — risk-adjusted 40d momentum, ranked cross-sectionally.",
+  "performance": "IC negative at 9 of 9 horizon/window combinations, pooled t to -6.1; top quintile the worst of five. H3's +7.33% holdout was concentration, not signal.",
+  "why_killed": "The factor never had an edge — the apparent H3 result rode one month (September 78% of profit); the per-date rank IC, measured directly, is significantly NEGATIVE.",
+  "source": "Plan §22 — IC negative at 9 of 9 horizons (pooled t to -6.1), top quintile worst of five"
  },
  "lowvol_ranktilt": {
   "killed_by": "zero_fee_sanity",
@@ -45,6 +102,13 @@
   "gross_edge_per_trade": -0.006068949812037718,
   "roundtrip_cost": 0.002,
   "cost_coverage_recorded": -3.03,
-  "source": "Plan \u00a717.8 \u2014 LowVolRankTilt17, the first real candidate at S5 (2026-11-05): rank IC real (t 5.0, 7/7 folds) but the signed long-only rank-tilt monetization lost 33.43% at ZERO fees over the full pre-registered range; G-passive -103.7pp vs the scaled universe. Family closed permanently by the prereg's committed consequences; the \u00a717.8 LowVolatility IC is retired as monetizable."
+  "era": "factory pipeline, first real candidate at S5 (2026-11-05), signed prereg",
+  "data": "Binance spot 1d OHLCV, 17 pairs, full pre-registered range through HARD_STOP 2025-12-31; zero-fee S5 monetization run.",
+  "universe": "The frozen 17-pair USDT universe.",
+  "timeframe": "1d",
+  "construction": "Causal-DSL factor -ts_std(ts_ret(close, 1), 60) — prefer the quiet coins — monetized as a long-only linear rank tilt, 7d rebalance.",
+  "performance": "The rank IC was real: t 5.0, positive in 7 of 7 folds, confirmed on three S2 entries. The monetization: -33.43% at ZERO fees over the full range, mean -0.61%/trade (coverage -3.03×), G-passive -103.7pp vs the exposure-scaled universe (Sharpe -0.35 vs 1.38).",
+  "why_killed": "Real IC, unmonetizable tilt: quiet coins rank reliably and still underperform a passive holding of the same universe. Family closed PERMANENTLY by the signed prereg's committed consequences; the §17.8 LowVolatility IC is retired as monetizable.",
+  "source": "Plan §17.8 — LowVolRankTilt17, the first real candidate at S5 (2026-11-05): rank IC real (t 5.0, 7/7 folds) but the signed long-only rank-tilt monetization lost 33.43% at ZERO fees over the full pre-registered range; G-passive -103.7pp vs the scaled universe. Family closed permanently by the prereg's committed consequences; the §17.8 LowVolatility IC is retired as monetizable."
  }
 }
