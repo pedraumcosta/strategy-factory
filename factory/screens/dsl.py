@@ -1,8 +1,9 @@
 """The causal factor DSL — how an LLM stage (or a human) declares a
 cross-sectional ranking factor the screen can run.
 
-A factor is one expression over the price panels, composed from a closed
-set of primitives. Causality is enforced BY CONSTRUCTION, not by review:
+A factor is one expression over the data panels (close, volume, and —
+where the data set carries it — funding), composed from a closed set of
+primitives. Causality is enforced BY CONSTRUCTION, not by review:
 every primitive maps the value at date t to a function of rows <= t
 (trailing windows, positive lags, per-date cross-sectional transforms),
 so the §20.10 rule — every feature reconstructible from data <= t, no
@@ -24,7 +25,9 @@ from __future__ import annotations
 
 import ast
 
-PANELS = ("close", "volume")
+# funding at date t = the day's 8h funding events, all settled before the
+# daily close at t — so referencing it is causal under the same rule as close
+PANELS = ("close", "volume", "funding")
 # second argument: trailing window / lag length, int literal in [1, MAX_WINDOW]
 WINDOW_FUNCS = ("ts_ret", "ts_mean", "ts_std", "ts_min", "ts_max",
                 "ts_sum", "ts_lag", "ts_emd_trend", "ts_emd_noise")
@@ -120,9 +123,17 @@ def evaluate(expr: str, panels: dict):
     import pandas as pd  # noqa: F401  (heavy import kept local)
 
     tree = validate(expr)
+    used = {n.id for n in ast.walk(tree)
+            if isinstance(n, ast.Name) and n.id in PANELS}
+    absent = sorted(p for p in used if panels.get(p) is None)
+    if absent:
+        raise FactorExprError(
+            f"panel(s) {absent} not present in this data set — the expression "
+            "is grammatical but this universe/data_dir does not carry the data")
     ns = {
         "close": panels["close"],
         "volume": panels.get("volume"),
+        "funding": panels.get("funding"),
         "ts_ret": lambda x, n: x.pct_change(n),
         "ts_mean": lambda x, n: x.rolling(n).mean(),
         "ts_std": lambda x, n: x.rolling(n).std(),

@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from factory.screens import dsl
-from factory.screens.screen import FactorSpec, run_screen
+from factory.screens.screen import FactorSpec, load_panels, run_screen
 
 XSM = "ts_ret(close, 40) / ts_std(ts_ret(close, 1), 40)"
 
@@ -20,6 +20,7 @@ XSM = "ts_ret(close, 40) / ts_std(ts_ret(close, 1), 40)"
 def test_validate_accepts_the_h3_factor():
     dsl.validate(XSM)
     dsl.validate("cs_rank(ts_mean(volume, 20) * close) - 0.5")
+    dsl.validate("-ts_mean(funding, 7)")   # the FundingCarryTilt card
 
 
 @pytest.mark.parametrize("bad,why", [
@@ -64,6 +65,23 @@ def test_evaluate_matches_hand_built_pandas():
     pd.testing.assert_frame_equal(out, want)
 
 
+def test_evaluate_funding_panel():
+    import numpy as np
+    import pandas as pd
+    p = _panel()
+    rng = np.random.default_rng(3)
+    p["funding"] = pd.DataFrame(rng.normal(0, 1e-4, p["close"].shape),
+                                index=p["close"].index,
+                                columns=p["close"].columns)
+    out = dsl.evaluate("-ts_mean(funding, 7)", p)
+    pd.testing.assert_frame_equal(out, -p["funding"].rolling(7).mean())
+
+
+def test_evaluate_refuses_an_absent_panel():
+    with pytest.raises(dsl.FactorExprError, match="funding"):
+        dsl.evaluate("-ts_mean(funding, 7)", _panel())
+
+
 def test_causality_by_construction():
     """The §20.10 rule, directly: the factor at date t computed from data
     <= t equals the factor at date t computed from ALL data. No revision."""
@@ -87,6 +105,45 @@ def _write_feathers(data_dir: Path, panels):
             "volume": panels["volume"][sym].values,
         })
         df.to_feather(data_dir / "binance" / f"{sym}_USDT-1d.feather")
+
+
+def _write_funding(data_dir: Path, close, syms=None, rate=1e-4):
+    """One feather per symbol, three 8h events per close-index day."""
+    import pandas as pd
+    (data_dir / "funding").mkdir()
+    dates = pd.DatetimeIndex(close.index).tz_localize("UTC")
+    events = pd.DataFrame({
+        "date": [d + pd.Timedelta(hours=h) for d in dates for h in (0, 8, 16)],
+        "fundingRate": rate,
+    })
+    for sym in (syms if syms is not None else close.columns):
+        events.to_feather(data_dir / "funding" / f"{sym}_USDT-funding.feather")
+
+
+def test_load_panels_adds_the_funding_panel(tmp_path):
+    panels = _panel(days=30, assets=3)
+    _write_feathers(tmp_path, panels)
+    _write_funding(tmp_path, panels["close"])
+    out = load_panels(tmp_path, [f"{s}/USDT" for s in panels["close"].columns])
+    f = out["funding"]
+    assert f.index.equals(out["close"].index)
+    # three 8h events of 1e-4 sum onto each close-index day
+    assert (f.round(12) == 3e-4).all().all()
+
+
+def test_load_panels_without_funding_dir_has_no_funding_panel(tmp_path):
+    panels = _panel(days=30, assets=3)
+    _write_feathers(tmp_path, panels)
+    out = load_panels(tmp_path, [f"{s}/USDT" for s in panels["close"].columns])
+    assert "funding" not in out
+
+
+def test_load_panels_refuses_a_half_covered_funding_dir(tmp_path):
+    panels = _panel(days=30, assets=3)
+    _write_feathers(tmp_path, panels)
+    _write_funding(tmp_path, panels["close"], syms=["A0"])
+    with pytest.raises(FileNotFoundError, match="A1"):
+        load_panels(tmp_path, [f"{s}/USDT" for s in panels["close"].columns])
 
 
 FOLDS = [("1", "2021-02-01", "2022-01-31"), ("2", "2021-08-01", "2022-07-31")]
