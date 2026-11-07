@@ -19,12 +19,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from factory.universe import LEGACY_17
+
 ROOT = Path(__file__).resolve().parents[1]
 LEDGER = ROOT / "ledgers" / "trials.jsonl"
 FUNDING_DIR = Path.home() / "freqtrade-data" / "funding"
 DATA_DIR = Path.home() / "freqtrade-data"
-UNIVERSE = ["ADA", "ALGO", "AVAX", "BNB", "BTC", "DOGE", "ETH", "HBAR",
-            "LINK", "LTC", "NEAR", "SOL", "TRX", "UNI", "XLM", "XRP", "ZEC"]
+UNIVERSE = LEGACY_17
 SEED = 20261106
 T_MIN = 2.0
 
