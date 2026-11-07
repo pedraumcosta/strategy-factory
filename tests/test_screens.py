@@ -23,6 +23,16 @@ def test_validate_accepts_the_h3_factor():
     dsl.validate("-ts_mean(funding, 7)")   # the FundingCarryTilt card
 
 
+def test_validate_accepts_the_topic14_composites():
+    """Plan §17 topic 14: the two registered composite expressions parse —
+    a composite is one DSL expression, no new screen machinery."""
+    dsl.validate("cs_zscore(-ts_mean(funding, 7))"
+                 " + cs_zscore(close / ts_max(close, 90))")
+    dsl.validate("cs_zscore(-ts_mean(funding, 7))"
+                 " + cs_zscore(close / ts_max(close, 90))"
+                 " + cs_zscore(-ts_std(ts_ret(close, 1), 60))")
+
+
 @pytest.mark.parametrize("bad,why", [
     ("ts_lag(close, -1)", "negative lag would read the future"),
     ("ts_ret(close, 0)", "zero window"),
