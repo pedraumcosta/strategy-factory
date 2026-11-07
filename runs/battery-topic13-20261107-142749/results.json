@@ -1,0 +1,188 @@
+{
+ "meta": {
+  "universe_names": 52,
+  "perp_subset_names": 52,
+  "calibration_only": "a PASS reopens no closed family and sends nothing to S0 (Plan \u00a717.13)"
+ },
+ "calibration": {
+  "short_term_reversal": {
+   "design": "cross_sectional_ic",
+   "calibration_valid": true,
+   "passed": true,
+   "reason": "best horizon 1d needs IC>0 with t\u22652.0; h1: IC +0.0378 (t +2.1), h5: IC +0.0197 (t +1.2), h21: IC -0.0119 (t -0.7)",
+   "ic_by_horizon": {
+    "1": {
+     "mean": 0.0378,
+     "t": 2.0946
+    },
+    "5": {
+     "mean": 0.0197,
+     "t": 1.1774
+    },
+    "21": {
+     "mean": -0.0119,
+     "t": -0.7299
+    }
+   }
+  },
+  "low_volatility": {
+   "design": "cross_sectional_ic",
+   "calibration_valid": true,
+   "passed": true,
+   "reason": "best horizon 21d needs IC>0 with t\u22652.0; h1: IC +0.0630 (t +2.7), h5: IC +0.0704 (t +3.2), h21: IC +0.0988 (t +4.4)",
+   "ic_by_horizon": {
+    "1": {
+     "mean": 0.063,
+     "t": 2.7439
+    },
+    "5": {
+     "mean": 0.0704,
+     "t": 3.1509
+    },
+    "21": {
+     "mean": 0.0988,
+     "t": 4.3614
+    }
+   }
+  },
+  "volume_shock": {
+   "design": "cross_sectional_ic",
+   "calibration_valid": true,
+   "passed": false,
+   "reason": "best horizon 21d needs IC>0 with t\u22652.0; h1: IC -0.0253 (t -1.7), h5: IC -0.0115 (t -0.8), h21: IC -0.0081 (t -0.6)",
+   "ic_by_horizon": {
+    "1": {
+     "mean": -0.0253,
+     "t": -1.7372
+    },
+    "5": {
+     "mean": -0.0115,
+     "t": -0.7777
+    },
+    "21": {
+     "mean": -0.0081,
+     "t": -0.5801
+    }
+   }
+  },
+  "distance_from_highs": {
+   "design": "cross_sectional_ic",
+   "calibration_valid": true,
+   "passed": true,
+   "reason": "best horizon 21d needs IC>0 with t\u22652.0; h1: IC +0.0083 (t +0.4), h5: IC +0.0326 (t +1.7), h21: IC +0.0596 (t +3.1)",
+   "ic_by_horizon": {
+    "1": {
+     "mean": 0.0083,
+     "t": 0.4223
+    },
+    "5": {
+     "mean": 0.0326,
+     "t": 1.6652
+    },
+    "21": {
+     "mean": 0.0596,
+     "t": 3.0519
+    }
+   }
+  },
+  "FundingCarryTilt": {
+   "design": "cross_sectional_ic",
+   "calibration_valid": true,
+   "passed": true,
+   "reason": "best horizon 21d needs IC>0 with t\u22652.0; h1: IC +0.0213 (t +1.6), h5: IC +0.0410 (t +3.0), h21: IC +0.0454 (t +3.4)",
+   "ic_by_horizon": {
+    "1": {
+     "mean": 0.0213,
+     "t": 1.5834
+    },
+    "5": {
+     "mean": 0.041,
+     "t": 2.9835
+    },
+    "21": {
+     "mean": 0.0454,
+     "t": 3.3776
+    }
+   }
+  }
+ },
+ "regression_identical": true,
+ "regression": {
+  "FundingCarryTilt": {
+   "design": "cross_sectional_ic",
+   "calibration_valid": true,
+   "passed": true,
+   "reason": "best horizon 21d needs IC>0 with t\u22652.0; h1: IC +0.0396 (t +1.9), h5: IC +0.0637 (t +3.1), h21: IC +0.0931 (t +4.7)",
+   "ic_by_horizon": {
+    "1": {
+     "mean": 0.0396,
+     "t": 1.9243
+    },
+    "5": {
+     "mean": 0.0637,
+     "t": 3.1152
+    },
+    "21": {
+     "mean": 0.0931,
+     "t": 4.7092
+    }
+   }
+  },
+  "ListingAgeEffect": {
+   "design": "cross_sectional_ic",
+   "calibration_valid": true,
+   "passed": false,
+   "reason": "best horizon 1d needs IC>0 with t\u22652.0; h1: IC -0.0611 (t -2.4), h5: IC -0.0808 (t -3.2), h21: IC -0.0970 (t -3.7)",
+   "ic_by_horizon": {
+    "1": {
+     "mean": -0.0611,
+     "t": -2.4313
+    },
+    "5": {
+     "mean": -0.0808,
+     "t": -3.2445
+    },
+    "21": {
+     "mean": -0.097,
+     "t": -3.6679
+    }
+   }
+  },
+  "BtcLeadLag": {
+   "design": "conditional",
+   "calibration_valid": true,
+   "passed": false,
+   "pooled_t": -1.22,
+   "diff_bp_per_day": -25.46,
+   "per_fold_t": [
+    -1.23,
+    -0.78,
+    -0.87,
+    -0.99,
+    -0.81,
+    -0.81,
+    0.26
+   ],
+   "oracle_t": 39.9,
+   "placebo_t": 0.66
+  },
+  "WeekendSeasonality": {
+   "design": "conditional",
+   "calibration_valid": true,
+   "passed": false,
+   "pooled_t": -0.17,
+   "diff_bp_per_day": -3.47,
+   "per_fold_t": [
+    0.42,
+    0.77,
+    0.37,
+    -0.14,
+    0.34,
+    0.17,
+    -0.73
+   ],
+   "oracle_t": 39.9,
+   "placebo_t": 0.77
+  }
+ }
+}

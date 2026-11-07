@@ -1,9 +1,13 @@
-"""Fetch Binance USDT-perp funding-rate history for the 17-pair universe
-(Plan §17 topic 11's registered data family). Raw history is stored beside
-the price data OUTSIDE the repo — ~/freqtrade-data/funding/<SYM>_USDT-funding.feather
-— one row per 8h funding event. Fetches everything available; READERS cap
-at the screen's HARD_STOP (the holdout rule lives at the read seam, same
-as load_panels).
+"""Fetch Binance USDT-perp funding-rate history (Plan §17 topic 11's
+registered data family; topic 13 extends it to the expanded universe).
+Raw history is stored beside the price data OUTSIDE the repo —
+~/freqtrade-data/funding/<SYM>_USDT-funding.feather — one row per 8h
+funding event. Fetches everything available; READERS cap at the screen's
+HARD_STOP (the holdout rule lives at the read seam, same as load_panels).
+
+A file already on disk is never refetched or overwritten (the regression
+arms read the originals). A name that never had a USDT perp returns no
+events and gets no file — load_panels' `subset` mode records it as NaN.
 
   uv run python tools/fetch_funding.py
 """
@@ -12,24 +16,40 @@ from __future__ import annotations
 
 import json
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
 import pandas as pd
 
+from factory.universe import LEGACY_17, expanded
+
 URL = "https://fapi.binance.com/fapi/v1/fundingRate"
 OUT = Path.home() / "freqtrade-data" / "funding"
-UNIVERSE = ["ADA", "ALGO", "AVAX", "BNB", "BTC", "DOGE", "ETH", "HBAR",
-            "LINK", "LTC", "NEAR", "SOL", "TRX", "UNI", "XLM", "XRP", "ZEC"]
 START_MS = 1546300800000   # 2019-01-01, before the first Binance perp listing
 
 
-def fetch_symbol(sym: str) -> pd.DataFrame:
+def universe() -> list[str]:
+    try:
+        return sorted(set(LEGACY_17) | set(expanded()))
+    except FileNotFoundError:       # expanded universe not built yet
+        return list(LEGACY_17)
+
+
+def fetch_symbol(sym: str, prefix: str = "") -> pd.DataFrame:
+    """One perp's funding events. Memecoin perps are quoted per 1000 units
+    (1000SHIBUSDT etc.); the funding RATE is dimensionless, so when the
+    plain symbol has no perp the 1000-prefixed one is the same quantity."""
     rows, start = [], START_MS
     while True:
-        q = f"?symbol={sym}USDT&startTime={start}&limit=1000"
-        with urllib.request.urlopen(URL + q, timeout=30) as r:
-            batch = json.loads(r.read())
+        q = f"?symbol={prefix}{sym}USDT&startTime={start}&limit=1000"
+        try:
+            with urllib.request.urlopen(URL + q, timeout=30) as r:
+                batch = json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            if e.code == 400:      # no such perp symbol — not an error
+                return pd.DataFrame()
+            raise
         if not batch:
             break
         rows.extend(batch)
@@ -48,9 +68,14 @@ def fetch_symbol(sym: str) -> pd.DataFrame:
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    for sym in UNIVERSE:
+    for sym in universe():
         f = OUT / f"{sym}_USDT-funding.feather"
+        if f.exists():
+            print(f"{sym}: already fetched, skipping")
+            continue
         df = fetch_symbol(sym)
+        if df.empty:
+            df = fetch_symbol(sym, prefix="1000")
         if df.empty:
             print(f"{sym}: NO DATA")
             continue

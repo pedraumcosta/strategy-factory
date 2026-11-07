@@ -27,11 +27,12 @@ from pathlib import Path
 
 import pandas as pd
 
+from factory.universe import LEGACY_17
+
 URL = ("https://data.binance.vision/data/futures/um/daily/metrics/"
        "{sym}USDT/{sym}USDT-metrics-{day}.zip")
 OUT = Path.home() / "freqtrade-data" / "oi"
-UNIVERSE = ["ADA", "ALGO", "AVAX", "BNB", "BTC", "DOGE", "ETH", "HBAR",
-            "LINK", "LTC", "NEAR", "SOL", "TRX", "UNI", "XLM", "XRP", "ZEC"]
+UNIVERSE = LEGACY_17
 START = date(2021, 12, 1)   # first day Vision publishes metrics
 END = date(2025, 12, 31)    # HARD_STOP; nothing after is needed
 

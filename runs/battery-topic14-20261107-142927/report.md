@@ -1,0 +1,127 @@
+# §17 topic 14 battery — two registered composites vs their own components
+
+52 perp-funded names of the expanded universe; identical panel for every arm.
+
+## cmp_funding_carry: **PASS**
+```json
+{
+ "design": "cross_sectional_ic",
+ "calibration_valid": true,
+ "passed": true,
+ "reason": "best horizon 21d needs IC>0 with t\u22652.0; h1: IC +0.0208 (t +1.5), h5: IC +0.0411 (t +3.0), h21: IC +0.0462 (t +3.4)",
+ "ic_by_horizon": {
+  "1": {
+   "mean": 0.0208,
+   "t": 1.5439
+  },
+  "5": {
+   "mean": 0.0411,
+   "t": 2.9761
+  },
+  "21": {
+   "mean": 0.0462,
+   "t": 3.4362
+  }
+ }
+}
+```
+
+## cmp_distance_from_highs: **PASS**
+```json
+{
+ "design": "cross_sectional_ic",
+ "calibration_valid": true,
+ "passed": true,
+ "reason": "best horizon 21d needs IC>0 with t\u22652.0; h1: IC +0.0083 (t +0.4), h5: IC +0.0326 (t +1.7), h21: IC +0.0596 (t +3.1)",
+ "ic_by_horizon": {
+  "1": {
+   "mean": 0.0083,
+   "t": 0.4223
+  },
+  "5": {
+   "mean": 0.0326,
+   "t": 1.6652
+  },
+  "21": {
+   "mean": 0.0596,
+   "t": 3.0519
+  }
+ }
+}
+```
+
+## cmp_low_volatility: **PASS**
+```json
+{
+ "design": "cross_sectional_ic",
+ "calibration_valid": true,
+ "passed": true,
+ "reason": "best horizon 21d needs IC>0 with t\u22652.0; h1: IC +0.0630 (t +2.7), h5: IC +0.0704 (t +3.2), h21: IC +0.0988 (t +4.4)",
+ "ic_by_horizon": {
+  "1": {
+   "mean": 0.063,
+   "t": 2.7439
+  },
+  "5": {
+   "mean": 0.0704,
+   "t": 3.1509
+  },
+  "21": {
+   "mean": 0.0988,
+   "t": 4.3614
+  }
+ }
+}
+```
+
+## CarryBreakoutComposite: **PASS**
+```json
+{
+ "design": "cross_sectional_ic",
+ "calibration_valid": true,
+ "passed": true,
+ "reason": "best horizon 21d needs IC>0 with t\u22652.0; h1: IC +0.0125 (t +0.7), h5: IC +0.0375 (t +2.2), h21: IC +0.0620 (t +3.5)",
+ "ic_by_horizon": {
+  "1": {
+   "mean": 0.0125,
+   "t": 0.722
+  },
+  "5": {
+   "mean": 0.0375,
+   "t": 2.1649
+  },
+  "21": {
+   "mean": 0.062,
+   "t": 3.5232
+  }
+ },
+ "best_component_h21_ic": 0.0596,
+ "beats_components": true
+}
+```
+
+## CarryBreakoutQuietComposite: **KILL**
+```json
+{
+ "design": "cross_sectional_ic",
+ "calibration_valid": true,
+ "passed": false,
+ "reason": "best horizon 21d needs IC>0 with t\u22652.0; h1: IC +0.0398 (t +2.0), h5: IC +0.0629 (t +3.1), h21: IC +0.0898 (t +4.6)",
+ "ic_by_horizon": {
+  "1": {
+   "mean": 0.0398,
+   "t": 1.9717
+  },
+  "5": {
+   "mean": 0.0629,
+   "t": 3.1286
+  },
+  "21": {
+   "mean": 0.0898,
+   "t": 4.5771
+  }
+ },
+ "best_component_h21_ic": 0.0988,
+ "beats_components": false
+}
+```

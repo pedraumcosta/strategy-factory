@@ -23,6 +23,16 @@ def test_validate_accepts_the_h3_factor():
     dsl.validate("-ts_mean(funding, 7)")   # the FundingCarryTilt card
 
 
+def test_validate_accepts_the_topic14_composites():
+    """Plan §17 topic 14: the two registered composite expressions parse —
+    a composite is one DSL expression, no new screen machinery."""
+    dsl.validate("cs_zscore(-ts_mean(funding, 7))"
+                 " + cs_zscore(close / ts_max(close, 90))")
+    dsl.validate("cs_zscore(-ts_mean(funding, 7))"
+                 " + cs_zscore(close / ts_max(close, 90))"
+                 " + cs_zscore(-ts_std(ts_ret(close, 1), 60))")
+
+
 @pytest.mark.parametrize("bad,why", [
     ("ts_lag(close, -1)", "negative lag would read the future"),
     ("ts_ret(close, 0)", "zero window"),
@@ -144,6 +154,27 @@ def test_load_panels_refuses_a_half_covered_funding_dir(tmp_path):
     _write_funding(tmp_path, panels["close"], syms=["A0"])
     with pytest.raises(FileNotFoundError, match="A1"):
         load_panels(tmp_path, [f"{s}/USDT" for s in panels["close"].columns])
+
+
+def test_load_panels_subset_mode_nans_the_uncovered_names(tmp_path):
+    """Plan §17 topic 13: a pre-registered battery may declare the perp
+    subset — uncovered names become all-NaN funding columns, prices stay."""
+    panels = _panel(days=30, assets=3)
+    _write_feathers(tmp_path, panels)
+    _write_funding(tmp_path, panels["close"], syms=["A0"])
+    out = load_panels(tmp_path, [f"{s}/USDT" for s in panels["close"].columns],
+                      funding="subset")
+    f = out["funding"]
+    assert list(f.columns) == list(out["close"].columns)
+    assert (f["A0"].round(12) == 3e-4).all()
+    assert f["A1"].isna().all() and f["A2"].isna().all()
+
+
+def test_load_panels_rejects_an_unknown_funding_mode(tmp_path):
+    panels = _panel(days=30, assets=3)
+    _write_feathers(tmp_path, panels)
+    with pytest.raises(ValueError, match="funding mode"):
+        load_panels(tmp_path, ["A0/USDT"], funding="lenient")
 
 
 FOLDS = [("1", "2021-02-01", "2022-01-31"), ("2", "2021-08-01", "2022-07-31")]

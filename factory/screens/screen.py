@@ -64,7 +64,8 @@ def registered_folds() -> list[tuple[str, str, str]]:
 
 
 def load_panels(data_dir: Path, universe: list[str],
-                timeframe: str = "1d", hard_stop: str | None = HARD_STOP) -> dict:
+                timeframe: str = "1d", hard_stop: str | None = HARD_STOP,
+                funding: str = "strict") -> dict:
     """{close, volume[, funding]} wide panels, tz-naive daily index, capped
     at `hard_stop` (the screen's registered IS cap by default). Prices come
     from <data_dir>/<EXCHANGE>/SYM_USDT-<tf>.feather; the funding panel is
@@ -74,7 +75,18 @@ def load_panels(data_dir: Path, universe: list[str],
     hard_stop=None to read everything and let the holdout ledger's spans
     decide readability instead — the similarity tools (factory scenarios /
     novelty) do this, since the ledger, not a constant, is the authority on
-    what is spent."""
+    what is spent.
+
+    `funding` is the coverage mode (Plan §17 topic 13): "strict" — the
+    default and the S2 path — raises on a partially covered funding dir,
+    because a half-covered panel silently biases every cross-sectional
+    rank toward the covered names; "subset" — usable only by a
+    pre-registered battery that DECLARES the subset — gives uncovered
+    names an all-NaN funding column instead, so they drop out of
+    funding-referencing factors pairwise while staying in the price
+    panels."""
+    if funding not in ("strict", "subset"):
+        raise ValueError(f"unknown funding mode {funding!r}")
     import pandas as pd
 
     closes, vols, missing = {}, {}, []
@@ -110,14 +122,17 @@ def load_panels(data_dir: Path, universe: list[str],
             funds[sym] = (pd.Series(df["fundingRate"].astype(float).values,
                                     index=idx)
                           .resample("D").sum(min_count=1))
-        if fmissing:
+        if fmissing and funding == "strict":
             # a half-covered funding panel would silently bias every
             # cross-sectional rank toward the covered names
             raise FileNotFoundError(
                 f"funding data exists under {funding_dir} but is missing "
                 f"for {fmissing} — fetch it (tools/fetch_funding.py) or "
                 "remove the directory")
-        panels["funding"] = pd.DataFrame(funds).sort_index().reindex(close.index)
+        fund = pd.DataFrame(funds).sort_index().reindex(close.index)
+        for sym in fmissing:    # subset mode: uncovered names are NaN
+            fund[sym] = float("nan")
+        panels["funding"] = fund[close.columns]
     return panels
 
 
