@@ -36,10 +36,13 @@ def universe() -> list[str]:
         return list(LEGACY_17)
 
 
-def fetch_symbol(sym: str) -> pd.DataFrame:
+def fetch_symbol(sym: str, prefix: str = "") -> pd.DataFrame:
+    """One perp's funding events. Memecoin perps are quoted per 1000 units
+    (1000SHIBUSDT etc.); the funding RATE is dimensionless, so when the
+    plain symbol has no perp the 1000-prefixed one is the same quantity."""
     rows, start = [], START_MS
     while True:
-        q = f"?symbol={sym}USDT&startTime={start}&limit=1000"
+        q = f"?symbol={prefix}{sym}USDT&startTime={start}&limit=1000"
         try:
             with urllib.request.urlopen(URL + q, timeout=30) as r:
                 batch = json.loads(r.read())
@@ -71,6 +74,8 @@ def main() -> None:
             print(f"{sym}: already fetched, skipping")
             continue
         df = fetch_symbol(sym)
+        if df.empty:
+            df = fetch_symbol(sym, prefix="1000")
         if df.empty:
             print(f"{sym}: NO DATA")
             continue
