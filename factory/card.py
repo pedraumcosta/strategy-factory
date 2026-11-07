@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from factory import universe
 from factory.orchestrator import manifest as mf
 from factory.screens import dsl
 
@@ -75,8 +76,16 @@ def validate(card: dict) -> list[str]:
         problems.append(f"name {card['name']!r} is not a valid class name")
     if card["timeframe"] not in TIMEFRAMES:
         problems.append(f"timeframe {card['timeframe']!r} not in {sorted(TIMEFRAMES)}")
-    if not (isinstance(card["universe"], list) and 0 < len(card["universe"]) <= 17):
-        problems.append("universe must be a list of 1-17 pairs")
+    u = card["universe"]
+    if not (isinstance(u, list) and u):
+        problems.append("universe must be a non-empty list of pairs")
+    else:
+        names = {str(p).split("/")[0].upper() for p in u}
+        unknown = sorted(names - universe.known())
+        if unknown:
+            problems.append(
+                f"universe names outside the registered universes "
+                f"(factory/universe.py, §17 topic 13): {unknown}")
     problems += validate_estimates(card.get("estimates", {}))
     if not (isinstance(card["parameters"], dict) and card["parameters"]):
         problems.append("parameters must be a non-empty dict of a-priori values")

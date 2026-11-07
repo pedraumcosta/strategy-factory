@@ -251,6 +251,26 @@ def test_gamed_estimates_are_refused():
     assert not card_mod.validate(dict(CARD))  # the honest fixture still passes
 
 
+def test_universe_must_come_from_the_registry():
+    """Plan §17 topic 13: a card's universe is a subset of the registered
+    universes (legacy 17 + the expanded registry) — never an invented name,
+    and the full 52-name expanded universe is valid."""
+    from factory import card as card_mod
+    from factory.universe import expanded, known
+
+    bad = dict(CARD, universe=["BTC/USDT", "NOTACOIN/USDT"])
+    assert any("NOTACOIN" in p for p in card_mod.validate(bad))
+    assert not card_mod.validate(dict(CARD, universe=[
+        f"{s}/USDT" for s in sorted(known())]))
+    try:
+        full = expanded()
+    except FileNotFoundError:
+        full = None
+    if full:
+        assert not card_mod.validate(dict(CARD, universe=[
+            f"{s}/USDT" for s in full]))
+
+
 def test_fitted_objects_in_strategy_are_refused():
     """Implement.md's 'no fitting' rule had no regex backstop; the causal-fit
     rule (Plan §17 topic 6) is now refused at S4, not just in prose."""

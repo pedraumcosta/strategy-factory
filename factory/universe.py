@@ -35,3 +35,15 @@ def expanded_meta() -> dict:
 def expanded() -> list[str]:
     """The expanded universe, sorted; raises if the JSON was never built."""
     return sorted(expanded_meta())
+
+
+def known() -> set[str]:
+    """Every base name a card may put in its universe: the legacy 17 plus
+    the expanded registry when it has been built. A name outside this set
+    has no vetted data behind it and is rejected at intake."""
+    base = set(LEGACY_17)
+    try:
+        base |= set(expanded_meta())
+    except FileNotFoundError:
+        pass
+    return base

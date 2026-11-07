@@ -55,6 +55,8 @@ Write exactly two files into the current directory:
    live bot at 0.156% round-trip and per-trade noise on multi-week crypto
    holds is ~15 percentage points.
 
-Rules: numbers must be plain JSON numbers; do not invent a universe larger
-than 17 USDT pairs; if the idea is vague, choose the most testable concrete
+Rules: numbers must be plain JSON numbers; the universe must be a subset of
+the registered universes (the legacy 17 or the 52-name expanded registry in
+`factory/universe_expanded.json` — never a name outside them, intake rejects
+those); if the idea is vague, choose the most testable concrete
 reading and record that choice in "provenance". Write the files, nothing else.
