@@ -17,6 +17,8 @@ def test_render_from_synthetic_sources(tmp_path):
     (tmp_path / "graveyard.json").write_text(json.dumps({
         "_comment": "x",
         "corpse_a": {"killed_by": "cost_coverage", "coverage": 0.9,
+                     "era": "test era", "timeframe": "4h",
+                     "why_killed": "costs ate it",
                      "source": "run r1"},
     }))
     ledger = tmp_path / "trials.jsonl"
@@ -33,17 +35,39 @@ def test_render_from_synthetic_sources(tmp_path):
     m.stages["S0"] = {"status": "killed", "report": "bad card"}
     mf.save(run_dir, m)
 
+    bat = runs / "battery-test-1"
+    bat.mkdir()
+    (bat / "results.json").write_text(json.dumps({
+        "CandY": {"design": "conditional", "passed": False,
+                  "calibration_valid": True, "pooled_t": -0.2}}))
+
     text = record.render(
         record.closed_families(tmp_path / "kinship.json"),
         record.graveyard_corpses(tmp_path / "graveyard.json"),
         record.pipeline_runs(runs),
-        record.factor_screens(ledger))
+        record.factor_screens(ledger),
+        batteries=record.battery_screens(runs))
 
     assert "fam_a" in text and "all constructions of A" in text
     assert "corpse_a" in text and "cost_coverage" in text and "coverage=0.9" in text
+    # the dossier questions render as labeled lines, kept out of the numbers
+    assert "**era**: test era" in text and "**why_killed**: costs ate it" in text
+    assert "era=" not in text
     assert "killed at S0" in text and "bad card" in text
     assert "CandX" in text and "| kill |" in text.replace("  ", " ")
+    assert "CandY" in text and "pooled_t" in text
     assert "_comment" not in text
+
+
+def test_every_corpse_answers_the_dossier_questions():
+    """The register's contract: each graveyard entry carries all seven
+    context answers (data, security, timeframe, construction, performance,
+    result, why it failed)."""
+    corpses = record.graveyard_corpses(ROOT / "fixtures" / "graveyard.json")
+    assert corpses, "graveyard is empty?"
+    for c in corpses:
+        missing = [f for f in record.CONTEXT_FIELDS if f not in c["context"]]
+        assert not missing, f"{c['name']} missing {missing}"
 
 
 def test_render_skips_missing_ledger(tmp_path):

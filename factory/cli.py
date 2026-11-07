@@ -368,7 +368,8 @@ def cmd_record(args) -> None:
         record.closed_families(fixtures / "kinship_families.json"),
         record.graveyard_corpses(fixtures / "graveyard.json"),
         record.pipeline_runs(RUNS),
-        record.factor_screens(LEDGER))
+        record.factor_screens(LEDGER),
+        batteries=record.battery_screens(RUNS))
     if args.out:
         Path(args.out).write_text(text)
         print(f"wrote {args.out}")
