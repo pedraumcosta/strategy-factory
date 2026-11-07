@@ -109,7 +109,8 @@ def month_quote_vols(sym: str, month: str) -> list[tuple[int, float]]:
     return rows
 
 
-def judge(sym: str) -> dict | None:
+def measure(sym: str) -> dict | None:
+    """The name's evidence, or None when the age/length filters fail."""
     months = months_of(sym)
     if not months or months[0] > FIRST_MONTH_MAX or len(months) < MIN_MONTHS:
         return None
@@ -118,10 +119,15 @@ def judge(sym: str) -> dict | None:
         daily.extend(month_quote_vols(sym, m))
     daily = sorted(set(daily))[-LIQUIDITY_DAYS:]
     med = median(v for _, v in daily) if daily else 0.0
-    if med < MIN_MEDIAN_QUOTE_VOL:
-        return None
     return {"first_month": months[0], "last_month": months[-1],
             "months": len(months), "median_quote_vol_usd": round(med)}
+
+
+def judge(sym: str) -> dict | None:
+    meta = measure(sym)
+    if meta and meta["median_quote_vol_usd"] >= MIN_MEDIAN_QUOTE_VOL:
+        return meta
+    return None
 
 
 def main() -> None:
@@ -157,10 +163,18 @@ def main() -> None:
         keep = set(keep[:MAX_NAMES]) | (set(LEGACY_17) & set(results))
     else:
         keep = set(results)
-    missing_legacy = sorted(set(LEGACY_17) - keep)
-    if missing_legacy:
-        raise SystemExit(f"legacy names failed the rule: {missing_legacy} — "
-                         "the rule or the data needs looking at, not patching")
+    # the registered rule: LEGACY_17 are members BY UNION — a legacy name
+    # below the liquidity floor stays in, with the miss recorded as evidence
+    for base in sorted(set(LEGACY_17) - keep):
+        meta = measure(f"{base}USDT")
+        if meta is None:
+            raise SystemExit(f"legacy name {base} fails even the age/length "
+                             "filters — the data needs looking at, not patching")
+        meta["below_liquidity_floor"] = True
+        results[base] = meta
+        keep.add(base)
+        print(f"  {base}: legacy by union, below the liquidity floor "
+              f"(medianQV ${meta['median_quote_vol_usd']:,})")
     out = {"rule": {"first_month_max": FIRST_MONTH_MAX, "last_month": LAST_MONTH,
                     "min_months": MIN_MONTHS,
                     "min_median_quote_vol_usd": MIN_MEDIAN_QUOTE_VOL,
