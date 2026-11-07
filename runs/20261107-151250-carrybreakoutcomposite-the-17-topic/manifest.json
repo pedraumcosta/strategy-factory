@@ -1,0 +1,46 @@
+{
+ "run_id": "20261107-151250-carrybreakoutcomposite-the-17-topic",
+ "prompt": "CarryBreakoutComposite \u2014 the \u00a717 topic 14 battery survivor, entered by the user's explicit go-ahead of 2026-11-07 under the registered reopening ruling (docs/PLAN.md \u00a717 topic 14; the ruling: a pre-registered composite is a NEW family, funding carry and the closed sibling factors enter as COMPONENTS only). Cross-sectional composite ranking factor, exactly as registered and screened: cs_zscore(-ts_mean(funding, 7)) + cs_zscore(close / ts_max(close, 90)) \u2014 equal z-weights are a-priori and fixed; any reweighting is a forbidden variant. Universe: the ENTIRE 52-name expanded registry (factory/universe_expanded.json, all names as SYM/USDT pairs), daily bars. Construction: long-only weekly-rebalanced rank tilt (rebalance every 7 days; the 21d horizon carried the screen's IC \u2014 pooled h21 IC +0.0620, t 3.5, calibration valid, and it beat both its own components, though only thinly: +0.0024 over the breakout leg alone). Estimates must be DERIVED, not asserted, with the derivation in estimates_basis, and these priors weigh AGAINST the card: (a) the \u00a717.8 LowVolRankTilt17 lesson \u2014 real rank IC is not monetizable edge; its measured S5 was -33.43% at zero fees; (b) the \u00a717.11 FundingCarryTilt S2 kill \u2014 the daily-rebalanced single-leg tilt derived 0.04%/pair-day at turnover 0.22 and died at cost coverage 0.91x; the weekly rebalance must show honestly whether turnover netting across the two legs changes that arithmetic; (c) Vine's funding-sort PBO 0.81 stands against the carry leg; (d) do not credit the long leg's market beta \u2014 the universe drift counts for zero, per the distance_from_highs card's own precedent. turnover_per_trade must be derived under \u00a717.10 for a weekly reweight of a two-leg composite rank. Funding data: daily-summed 8h events for all 52 names (memecoin names via their 1000-prefixed perps, same dimensionless rate).",
+ "created_at": "2026-11-07T15:12:50-0300",
+ "stages": {
+  "S0": {
+   "status": "passed",
+   "started_at": "2026-11-07T15:12:55-0300",
+   "report": "card for CarryBreakoutComposite \u2014 ADVISORY: kin to closed family 'distance_from_highs' (confidence 0.88, jev-1.14.0); HG1 judges, this gate does not kill",
+   "data": {
+    "name": "CarryBreakoutComposite",
+    "kinship": "distance_from_highs"
+   },
+   "finished_at": "2026-11-07T15:15:57-0300"
+  },
+  "S1": {
+   "status": "passed",
+   "started_at": "2026-11-07T15:15:57-0300",
+   "report": "research memo written",
+   "data": {},
+   "finished_at": "2026-11-07T15:17:59-0300"
+  },
+  "S2": {
+   "status": "killed",
+   "started_at": "2026-11-07T15:17:59-0300",
+   "report": "noise_floor: needs \u2265112896 trades to resolve a 0.0700% edge at sd 12.00%; history supplies 11000; cost_coverage: coverage 0.88\u00d7 vs required 3.0\u00d7 (cost scaled by turnover 40%/trade)",
+   "data": {},
+   "finished_at": "2026-11-07T15:18:07-0300"
+  },
+  "S3": {
+   "status": "pending"
+  },
+  "S4": {
+   "status": "pending"
+  },
+  "S5": {
+   "status": "pending"
+  },
+  "S6": {
+   "status": "pending"
+  },
+  "S7": {
+   "status": "pending"
+  }
+ }
+}
