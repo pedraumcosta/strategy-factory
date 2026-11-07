@@ -49,13 +49,22 @@ def graveyard_corpses(graveyard_path: Path) -> list[dict]:
 
 def battery_screens(runs_dir: Path) -> list[dict]:
     """[{battery, candidate, design, passed, calibration_valid, stats}] from
-    every committed runs/battery-*/results.json, oldest first."""
+    every committed runs/battery-*/results.json, oldest first.
+
+    Two shapes on disk: the flat {candidate: result} map, and the nested
+    {candidates: {...}, regression: {...}, regression_identical: bool} shape
+    a battery with a regression arm writes. The regression arm renders as
+    one verdict row, not as re-listed candidates — its numbers are by
+    construction the earlier battery's."""
     out = []
     for d in sorted(runs_dir.glob("battery-*")) if runs_dir.is_dir() else []:
         f = d / "results.json"
         if not f.exists():
             continue
-        for name, r in json.loads(f.read_text()).items():
+        data = json.loads(f.read_text())
+        for name, r in data.get("candidates", data).items():
+            if not isinstance(r, dict) or "passed" not in r:
+                continue
             stats = {k: v for k, v in r.items()
                      if k not in ("design", "passed", "calibration_valid",
                                   "reason")}
@@ -64,6 +73,13 @@ def battery_screens(runs_dir: Path) -> list[dict]:
                         "passed": bool(r.get("passed")),
                         "calibration_valid": r.get("calibration_valid"),
                         "stats": stats})
+        if "regression_identical" in data:
+            names = ", ".join(data.get("regression", {})) or "prior battery"
+            out.append({"battery": d.name,
+                        "candidate": f"regression arm ({names})",
+                        "design": "exact-equality diff vs committed results",
+                        "passed": bool(data["regression_identical"]),
+                        "calibration_valid": None, "stats": {}})
     return out
 
 
@@ -157,12 +173,17 @@ def render(families: list[dict], corpses: list[dict],
                   "(tools/fetch_funding.py).", ""]
         for b in batteries:
             stats = json.dumps(b["stats"]) if b["stats"] else ""
-            calib = ("valid" if b["calibration_valid"]
-                     else "INVALID — run self-rejected")
+            if b["calibration_valid"] is None:   # no calibration arm (e.g.
+                calib = ""                       # a regression-diff verdict)
+            elif b["calibration_valid"]:
+                calib = ", calibration valid"
+            else:
+                calib = ", calibration INVALID — run self-rejected"
+            verdict = ("IDENTICAL" if b["passed"] else "DIVERGED") \
+                if b["design"].startswith("exact-equality") \
+                else ("PASS" if b["passed"] else "KILL")
             lines.append(f"- **{b['candidate']}** ({b['design']}, "
-                         f"{b['battery']}) — "
-                         f"{'PASS' if b['passed'] else 'KILL'}, "
-                         f"calibration {calib}"
+                         f"{b['battery']}) — {verdict}{calib}"
                          + (f" — {stats}" if stats else ""))
         lines.append("")
 
