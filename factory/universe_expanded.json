@@ -1,0 +1,327 @@
+{
+ "rule": {
+  "first_month_max": "2023-12",
+  "last_month": "2025-12",
+  "min_months": 24,
+  "min_median_quote_vol_usd": 10000000.0,
+  "max_names": 80,
+  "liquidity_days": 365,
+  "built_at": "2026-11-07"
+ },
+ "symbols": {
+  "AAVE": {
+   "first_month": "2020-10",
+   "last_month": "2025-12",
+   "months": 63,
+   "median_quote_vol_usd": 35655135
+  },
+  "ADA": {
+   "first_month": "2018-04",
+   "last_month": "2025-12",
+   "months": 93,
+   "median_quote_vol_usd": 96089954
+  },
+  "ALGO": {
+   "first_month": "2019-06",
+   "last_month": "2025-12",
+   "months": 79,
+   "median_quote_vol_usd": 8150941,
+   "below_liquidity_floor": true
+  },
+  "APT": {
+   "first_month": "2022-10",
+   "last_month": "2025-12",
+   "months": 39,
+   "median_quote_vol_usd": 22814554
+  },
+  "ARB": {
+   "first_month": "2023-03",
+   "last_month": "2025-12",
+   "months": 34,
+   "median_quote_vol_usd": 26875416
+  },
+  "AVAX": {
+   "first_month": "2020-09",
+   "last_month": "2025-12",
+   "months": 64,
+   "median_quote_vol_usd": 53648956
+  },
+  "BCH": {
+   "first_month": "2019-11",
+   "last_month": "2025-12",
+   "months": 74,
+   "median_quote_vol_usd": 22762171
+  },
+  "BNB": {
+   "first_month": "2017-11",
+   "last_month": "2025-12",
+   "months": 98,
+   "median_quote_vol_usd": 177598521
+  },
+  "BONK": {
+   "first_month": "2023-12",
+   "last_month": "2025-12",
+   "months": 25,
+   "median_quote_vol_usd": 26090190
+  },
+  "BTC": {
+   "first_month": "2017-08",
+   "last_month": "2025-12",
+   "months": 101,
+   "median_quote_vol_usd": 1811120137
+  },
+  "BTT": {
+   "first_month": "2019-01",
+   "last_month": "2022-01",
+   "months": 37,
+   "median_quote_vol_usd": 45549774
+  },
+  "CAKE": {
+   "first_month": "2021-02",
+   "last_month": "2025-12",
+   "months": 59,
+   "median_quote_vol_usd": 14211074
+  },
+  "CRV": {
+   "first_month": "2020-08",
+   "last_month": "2025-12",
+   "months": 65,
+   "median_quote_vol_usd": 23259578
+  },
+  "DOGE": {
+   "first_month": "2019-07",
+   "last_month": "2025-12",
+   "months": 78,
+   "median_quote_vol_usd": 213147434
+  },
+  "DOT": {
+   "first_month": "2020-08",
+   "last_month": "2025-12",
+   "months": 65,
+   "median_quote_vol_usd": 24512218
+  },
+  "EOS": {
+   "first_month": "2018-05",
+   "last_month": "2025-05",
+   "months": 85,
+   "median_quote_vol_usd": 10526128
+  },
+  "ETC": {
+   "first_month": "2018-06",
+   "last_month": "2025-12",
+   "months": 91,
+   "median_quote_vol_usd": 10037084
+  },
+  "ETH": {
+   "first_month": "2017-08",
+   "last_month": "2025-12",
+   "months": 101,
+   "median_quote_vol_usd": 1579982448
+  },
+  "FET": {
+   "first_month": "2019-02",
+   "last_month": "2025-12",
+   "months": 83,
+   "median_quote_vol_usd": 21234860
+  },
+  "FIL": {
+   "first_month": "2020-10",
+   "last_month": "2025-12",
+   "months": 63,
+   "median_quote_vol_usd": 16214441
+  },
+  "FLOKI": {
+   "first_month": "2023-05",
+   "last_month": "2025-12",
+   "months": 32,
+   "median_quote_vol_usd": 17501665
+  },
+  "FTM": {
+   "first_month": "2019-06",
+   "last_month": "2025-01",
+   "months": 68,
+   "median_quote_vol_usd": 44356828
+  },
+  "GALA": {
+   "first_month": "2021-09",
+   "last_month": "2025-12",
+   "months": 52,
+   "median_quote_vol_usd": 10940476
+  },
+  "HBAR": {
+   "first_month": "2019-09",
+   "last_month": "2025-12",
+   "months": 76,
+   "median_quote_vol_usd": 35578590
+  },
+  "HNT": {
+   "first_month": "2020-09",
+   "last_month": "2022-10",
+   "months": 26,
+   "median_quote_vol_usd": 10159199
+  },
+  "ICP": {
+   "first_month": "2021-05",
+   "last_month": "2025-12",
+   "months": 56,
+   "median_quote_vol_usd": 10769064
+  },
+  "INJ": {
+   "first_month": "2020-10",
+   "last_month": "2025-12",
+   "months": 63,
+   "median_quote_vol_usd": 12041842
+  },
+  "LDO": {
+   "first_month": "2022-05",
+   "last_month": "2025-12",
+   "months": 44,
+   "median_quote_vol_usd": 14999673
+  },
+  "LINK": {
+   "first_month": "2019-01",
+   "last_month": "2025-12",
+   "months": 84,
+   "median_quote_vol_usd": 63855684
+  },
+  "LTC": {
+   "first_month": "2017-12",
+   "last_month": "2025-12",
+   "months": 97,
+   "median_quote_vol_usd": 52764524
+  },
+  "MATIC": {
+   "first_month": "2019-04",
+   "last_month": "2024-09",
+   "months": 66,
+   "median_quote_vol_usd": 47230254
+  },
+  "MKR": {
+   "first_month": "2020-07",
+   "last_month": "2025-09",
+   "months": 63,
+   "median_quote_vol_usd": 10799267
+  },
+  "NEAR": {
+   "first_month": "2020-10",
+   "last_month": "2025-12",
+   "months": 63,
+   "median_quote_vol_usd": 31988616
+  },
+  "OM": {
+   "first_month": "2021-03",
+   "last_month": "2025-12",
+   "months": 58,
+   "median_quote_vol_usd": 10943092
+  },
+  "OP": {
+   "first_month": "2022-06",
+   "last_month": "2025-12",
+   "months": 43,
+   "median_quote_vol_usd": 17097973
+  },
+  "PAXG": {
+   "first_month": "2020-08",
+   "last_month": "2025-12",
+   "months": 65,
+   "median_quote_vol_usd": 12765008
+  },
+  "PENDLE": {
+   "first_month": "2023-07",
+   "last_month": "2025-12",
+   "months": 30,
+   "median_quote_vol_usd": 12422363
+  },
+  "PEPE": {
+   "first_month": "2023-05",
+   "last_month": "2025-12",
+   "months": 32,
+   "median_quote_vol_usd": 134299068
+  },
+  "RAY": {
+   "first_month": "2021-08",
+   "last_month": "2025-12",
+   "months": 53,
+   "median_quote_vol_usd": 10856351
+  },
+  "RNDR": {
+   "first_month": "2021-11",
+   "last_month": "2024-07",
+   "months": 33,
+   "median_quote_vol_usd": 35620418
+  },
+  "RUNE": {
+   "first_month": "2020-09",
+   "last_month": "2025-12",
+   "months": 64,
+   "median_quote_vol_usd": 11760207
+  },
+  "SEI": {
+   "first_month": "2023-08",
+   "last_month": "2025-12",
+   "months": 29,
+   "median_quote_vol_usd": 23769613
+  },
+  "SHIB": {
+   "first_month": "2021-05",
+   "last_month": "2025-12",
+   "months": 56,
+   "median_quote_vol_usd": 19578162
+  },
+  "SOL": {
+   "first_month": "2020-08",
+   "last_month": "2025-12",
+   "months": 65,
+   "median_quote_vol_usd": 590112453
+  },
+  "SUI": {
+   "first_month": "2023-05",
+   "last_month": "2025-12",
+   "months": 32,
+   "median_quote_vol_usd": 149085566
+  },
+  "TIA": {
+   "first_month": "2023-10",
+   "last_month": "2025-12",
+   "months": 27,
+   "median_quote_vol_usd": 14961948
+  },
+  "TRX": {
+   "first_month": "2018-06",
+   "last_month": "2025-12",
+   "months": 91,
+   "median_quote_vol_usd": 101202547
+  },
+  "UNI": {
+   "first_month": "2020-09",
+   "last_month": "2025-12",
+   "months": 64,
+   "median_quote_vol_usd": 39027678
+  },
+  "WLD": {
+   "first_month": "2023-07",
+   "last_month": "2025-12",
+   "months": 30,
+   "median_quote_vol_usd": 36076403
+  },
+  "XLM": {
+   "first_month": "2018-05",
+   "last_month": "2025-12",
+   "months": 92,
+   "median_quote_vol_usd": 19747807
+  },
+  "XRP": {
+   "first_month": "2018-05",
+   "last_month": "2025-12",
+   "months": 92,
+   "median_quote_vol_usd": 370016359
+  },
+  "ZEC": {
+   "first_month": "2019-03",
+   "last_month": "2025-12",
+   "months": 82,
+   "median_quote_vol_usd": 3526895,
+   "below_liquidity_floor": true
+  }
+ }
+}
