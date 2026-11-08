@@ -1,0 +1,81 @@
+# §17 topic 15 battery — Carver's EWMAC and carry, cross-sectional reading
+
+52 perp-funded names of the expanded universe; identical panel to topic 14; regression arm vs battery-topic14-20261107-142927: **IDENTICAL**.
+
+## ewmac_16_64: **KILL**
+```json
+{
+ "design": "cross_sectional_ic",
+ "calibration_valid": true,
+ "passed": false,
+ "reason": "best horizon 21d needs IC>0 with t\u22652.0; h1: IC -0.0050 (t -0.3), h5: IC +0.0032 (t +0.2), h21: IC +0.0133 (t +0.8)",
+ "ic_by_horizon": {
+  "1": {
+   "mean": -0.005,
+   "t": -0.3103
+  },
+  "5": {
+   "mean": 0.0032,
+   "t": 0.1902
+  },
+  "21": {
+   "mean": 0.0133,
+   "t": 0.7886
+  }
+ },
+ "kin": "cmp_distance_from_highs",
+ "kin_spearman": 0.8022
+}
+```
+
+## ewmac_32_128: **KILL**
+```json
+{
+ "design": "cross_sectional_ic",
+ "calibration_valid": true,
+ "passed": false,
+ "reason": "best horizon 21d needs IC>0 with t\u22652.0; h1: IC -0.0003 (t -0.0), h5: IC +0.0089 (t +0.5), h21: IC +0.0213 (t +1.3)",
+ "ic_by_horizon": {
+  "1": {
+   "mean": -0.0003,
+   "t": -0.0204
+  },
+  "5": {
+   "mean": 0.0089,
+   "t": 0.5318
+  },
+  "21": {
+   "mean": 0.0213,
+   "t": 1.2671
+  }
+ },
+ "kin": "cmp_distance_from_highs",
+ "kin_spearman": 0.6082
+}
+```
+
+## carry_vol: **KILL**
+```json
+{
+ "design": "cross_sectional_ic",
+ "calibration_valid": true,
+ "passed": false,
+ "reason": "best horizon 21d needs IC>0 with t\u22652.0; h1: IC -0.0149 (t -1.0), h5: IC -0.0012 (t -0.1), h21: IC +0.0043 (t +0.3)",
+ "ic_by_horizon": {
+  "1": {
+   "mean": -0.0149,
+   "t": -1.0457
+  },
+  "5": {
+   "mean": -0.0012,
+   "t": -0.0843
+  },
+  "21": {
+   "mean": 0.0043,
+   "t": 0.313
+  }
+ },
+ "kin": "cmp_funding_carry",
+ "kin_spearman": 0.9093
+}
+```
