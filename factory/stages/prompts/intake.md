@@ -41,7 +41,8 @@ Write exactly two files into the current directory:
      {"expr": "<one expression in the causal factor DSL>"} declaring the
      ranking score. The DSL (nothing else parses): panels `close`, `volume`;
      trailing-window functions `ts_ret(x, n)`, `ts_mean(x, n)`, `ts_std(x, n)`,
-     `ts_min(x, n)`, `ts_max(x, n)`, `ts_sum(x, n)`, `ts_lag(x, n)` with n a
+     `ts_min(x, n)`, `ts_max(x, n)`, `ts_sum(x, n)`, `ts_lag(x, n)`,
+     `ts_ewma(x, n)` (EWMA, pandas span semantics) with n a
      positive int literal; cross-sectional `cs_rank(x)`, `cs_zscore(x)`;
      `log(x)`, `abs(x)`, `sign(x)`; and + - * / with numeric literals.
      Example (classic risk-adjusted momentum):
