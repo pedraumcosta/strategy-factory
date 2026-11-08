@@ -30,7 +30,7 @@ import ast
 PANELS = ("close", "volume", "funding")
 # second argument: trailing window / lag length, int literal in [1, MAX_WINDOW]
 WINDOW_FUNCS = ("ts_ret", "ts_mean", "ts_std", "ts_min", "ts_max",
-                "ts_sum", "ts_lag", "ts_emd_trend", "ts_emd_noise")
+                "ts_sum", "ts_lag", "ts_ewma", "ts_emd_trend", "ts_emd_noise")
 UNARY_FUNCS = ("cs_rank", "cs_zscore", "log", "abs", "sign")
 MAX_WINDOW = 365
 # causal-EMD features (Plan §17.4): per-bar sifting needs room to find
@@ -141,6 +141,10 @@ def evaluate(expr: str, panels: dict):
         "ts_max": lambda x, n: x.rolling(n).max(),
         "ts_sum": lambda x, n: x.rolling(n).sum(),
         "ts_lag": lambda x, n: x.shift(n),
+        # Plan §17 topic 15: EWMA with pandas span semantics (A = 2/(n+1) —
+        # the convention Carver's Appendix B itself cites); min_periods = n
+        # keeps the rolling primitives' no-value-before-n contract
+        "ts_ewma": lambda x, n: x.ewm(span=n, min_periods=n, adjust=True).mean(),
         "ts_emd_trend": lambda x, n: _cemd().rolling(x, n, "trend"),
         "ts_emd_noise": lambda x, n: _cemd().rolling(x, n, "noise"),
         "cs_rank": lambda x: x.rank(axis=1, pct=True),

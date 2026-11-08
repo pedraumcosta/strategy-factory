@@ -33,6 +33,37 @@ def test_validate_accepts_the_topic14_composites():
                  " + cs_zscore(-ts_std(ts_ret(close, 1), 60))")
 
 
+def test_validate_accepts_the_topic15_constructions():
+    """Plan §17 topic 15: the three registered Carver constructions parse."""
+    dsl.validate("(ts_ewma(close, 16) - ts_ewma(close, 64))"
+                 " / (ts_std(ts_ret(close, 1), 25) * close)")
+    dsl.validate("(ts_ewma(close, 32) - ts_ewma(close, 128))"
+                 " / (ts_std(ts_ret(close, 1), 25) * close)")
+    dsl.validate("-ts_mean(funding, 7) / ts_std(ts_ret(close, 1), 25)")
+
+
+def test_ts_ewma_is_causal_and_window_gated():
+    """Perturbing rows after t leaves ts_ewma at t unchanged (causality),
+    and no value exists before n observations (the rolling contract)."""
+    import numpy as np
+    import pandas as pd
+
+    idx = pd.date_range("2024-01-01", periods=60, freq="D")
+    rng = np.random.default_rng(7)
+    base = pd.DataFrame({"A": rng.random(60) + 1, "B": rng.random(60) + 1},
+                        index=idx)
+    bent = base.copy()
+    bent.iloc[40:] = 999.0
+    a = dsl.evaluate("ts_ewma(close, 16)", {"close": base})
+    b = dsl.evaluate("ts_ewma(close, 16)", {"close": bent})
+    pd.testing.assert_frame_equal(a.iloc[:40], b.iloc[:40])
+    assert a.iloc[:15].isna().all().all()      # min_periods = n
+    assert a.iloc[15:].notna().all().all()
+    # pinned semantics: pandas span EWMA, the convention Carver cites
+    expected = base.ewm(span=16, min_periods=16, adjust=True).mean()
+    pd.testing.assert_frame_equal(a, expected)
+
+
 @pytest.mark.parametrize("bad,why", [
     ("ts_lag(close, -1)", "negative lag would read the future"),
     ("ts_ret(close, 0)", "zero window"),
