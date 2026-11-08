@@ -47,3 +47,54 @@ def known() -> set[str]:
     except FileNotFoundError:
         pass
     return base
+
+
+# --- Plan §17 topic 16: the universe descriptor -----------------------------
+# Data generality as a seam, not speculative ingestion: a universe carries its
+# own panel registry (each panel's one-sentence causality contract — the
+# dsl.py funding comment, generalized — and a level-safety flag), calendar,
+# annualization factor and cost metadata. Sole instances today are
+# crypto-binance; a new asset class arrives as a new descriptor + loader +
+# its own data-vetting registration, never as edits to the screens.
+
+from dataclasses import dataclass, field
+
+
+@dataclass(frozen=True)
+class PanelSpec:
+    """One panel's contract. `level_safe=False` is the futures lesson bought
+    early: on a back-adjusted continuous series returns are meaningful and
+    LEVELS are not, so such a panel is usable only as the direct first
+    argument of ts_ret — enforced by dsl.validate_for_universe."""
+    causality: str
+    level_safe: bool = True
+
+
+@dataclass(frozen=True)
+class UniverseDescriptor:
+    name: str
+    symbols: tuple[str, ...]
+    panels: dict = field(default_factory=dict)
+    calendar: str = "24/7"
+    ann_factor: int = 365
+    taker_cost_bps: float = 10.0
+
+
+_CRYPTO_PANELS = {
+    "close": PanelSpec("daily close at t, known at t"),
+    "volume": PanelSpec("volume over the day ending at t"),
+    "funding": PanelSpec("the day's 8h funding events, all settled before "
+                         "the daily close at t"),
+}
+
+
+def crypto_binance_legacy17() -> UniverseDescriptor:
+    return UniverseDescriptor(name="crypto-binance-legacy17",
+                              symbols=tuple(LEGACY_17),
+                              panels=dict(_CRYPTO_PANELS))
+
+
+def crypto_binance_expanded() -> UniverseDescriptor:
+    return UniverseDescriptor(name="crypto-binance-expanded",
+                              symbols=tuple(expanded()),
+                              panels=dict(_CRYPTO_PANELS))

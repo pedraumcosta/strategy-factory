@@ -157,3 +157,32 @@ def evaluate(expr: str, panels: dict):
     out = eval(compile(ast.fix_missing_locations(tree), "<factor>", "eval"),
                {"__builtins__": {}}, ns)
     return out.replace([np.inf, -np.inf], np.nan)
+
+
+def validate_for_universe(expr: str, desc) -> ast.Expression:
+    """validate() plus the universe's own panel registry (Plan §17 topic 16):
+    a referenced panel must exist in the universe, and a panel that is not
+    level-safe (back-adjusted futures prices: returns meaningful, levels
+    not) may appear ONLY as the direct first argument of ts_ret."""
+    tree = validate(expr)
+    for node in ast.walk(tree):
+        if (isinstance(node, ast.Name) and node.id in PANELS
+                and node.id not in desc.panels):
+            raise FactorExprError(
+                f"panel {node.id!r} is not carried by universe "
+                f"{desc.name!r} ({sorted(desc.panels)})")
+    unsafe = {p for p, s in desc.panels.items() if not s.level_safe}
+    if unsafe:
+        ok = set()
+        for node in ast.walk(tree):
+            if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                    and node.func.id == "ts_ret" and node.args
+                    and isinstance(node.args[0], ast.Name)):
+                ok.add(id(node.args[0]))
+        for node in ast.walk(tree):
+            if (isinstance(node, ast.Name) and node.id in unsafe
+                    and id(node) not in ok):
+                raise FactorExprError(
+                    f"panel {node.id!r} is not level-safe in universe "
+                    f"{desc.name!r} — usable only as ts_ret({node.id}, n)")
+    return tree
